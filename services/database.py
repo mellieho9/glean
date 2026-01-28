@@ -62,7 +62,7 @@ class DatabaseClient:
         return self._service_client
 
 
-def get_db_client(use_service_role: bool = False) -> Client:
+def get_database_client(use_service_role: bool = False) -> Client:
     """
     Get Supabase database client for dependency injection.
     
@@ -72,10 +72,10 @@ def get_db_client(use_service_role: bool = False) -> Client:
     Returns:
         Supabase Client instance
     """
-    db_client = DatabaseClient()
-    if use_service_role and db_client.service_client:
-        return db_client.service_client
-    return db_client.client
+    database_client = DatabaseClient()
+    if use_service_role and database_client.service_client:
+        return database_client.service_client
+    return database_client.client
 
 
 def _build_query(client: Client, table_name: str, request: QueryRowRequest):
