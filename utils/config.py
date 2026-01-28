@@ -22,7 +22,7 @@ class SupabaseConfig:
             raise ValueError("SUPABASE_KEY environment variable is required")
         return True
     
-    def get_client_config(self, use_service_role: bool = False) -> dict:
+    def get_client_config(self) -> dict:
         """Get configuration for Supabase client."""
         self.validate()
         return {
