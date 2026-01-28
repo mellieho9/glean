@@ -13,7 +13,6 @@ class SupabaseConfig:
     def __init__(self):
         self.url: str = os.getenv("SUPABASE_URL", "")
         self.key: str = os.getenv("SUPABASE_KEY", "")
-        self.service_role_key: Optional[str] = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     
     def validate(self) -> bool:
         """Validate that required configuration is present."""
@@ -28,7 +27,7 @@ class SupabaseConfig:
         self.validate()
         return {
             "supabase_url": self.url,
-            "supabase_key": self.service_role_key if use_service_role and self.service_role_key else self.key
+            "supabase_key": self.key
         }
 
 
