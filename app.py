@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from routes.database import router as database_router
+from routes.user import router as user_router
+from routes.adaptor import router as adaptor_router
 
 app = FastAPI(
     title="Glean API",
@@ -7,5 +8,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Include database routes
-app.include_router(database_router)
+# Include routers
+app.include_router(user_router)
+app.include_router(adaptor_router)
