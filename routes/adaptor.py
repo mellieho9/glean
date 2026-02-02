@@ -7,10 +7,11 @@ from services.adaptor import (
     clear_user_session
 )
 from services.user import get_current_user
+from services.database import get_authenticated_client
 from models.user import User
 
 
-router = APIRouter(prefix="/api/integrations", tags=["integrations"])
+router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
 async def get_authenticated_user(access_token: str = Body(...)) -> User:
@@ -39,7 +40,8 @@ async def authorize(
         Dict with connection info including redirect_url and account details
     """
     user = await get_authenticated_user(access_token)
-    return authorize_integration(user, integration_slug, timeout_ms)
+    db_client = get_authenticated_client(access_token)
+    return authorize_integration(user, integration_slug, timeout_ms, db_client)
 
 
 @router.post("/connections")

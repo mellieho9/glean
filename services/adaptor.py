@@ -3,7 +3,10 @@ from typing import Dict, Optional
 
 from composio import Composio
 
+from supabase import Client
+
 from models.user import User
+from services.database import create_row
 
 
 _composio_client: Optional[Composio] = None
@@ -43,7 +46,8 @@ def clear_user_session(user_id: str):
 def authorize_integration(
     user: User,
     integration_slug: str,
-    timeout_ms: int = 60000
+    timeout_ms: int = 60000,
+    db_client: Optional[Client] = None
 ) -> Dict[str, any]:
     """
     Generate OAuth link and wait for user to complete authorization for any integration.
@@ -52,6 +56,7 @@ def authorize_integration(
         user: User object
         integration_slug: Integration name (e.g., "googlesheets", "notion", "slack")
         timeout_ms: Timeout in milliseconds to wait for connection (default: 60 seconds)
+        db_client: Optional authenticated Supabase client for database operations (required for RLS)
 
     Returns:
         Dict with connection info including redirect_url and connected_account details
@@ -65,21 +70,28 @@ def authorize_integration(
 
     try:
         connected_account = connection_request.wait_for_connection(timeout_ms)
+
+        # Create integration entry in Supabase (if authenticated client provided)
+        if db_client:
+            integration_data = {
+                "user_id": user.id,
+                "slug": integration_slug,
+                "composio_connection_id": connected_account.id
+            }
+
+            print(f"DEBUG: Attempting to insert integration with user_id: {user.id}")
+            print(f"DEBUG: Integration data: {integration_data}")
+
+            create_row("integrations", integration_data, client=db_client)
+
         return {
             "integration": integration_slug,
             "redirect_url": redirect_url,
             "connected": True,
             "account_id": connected_account.id,
-            "status": "success"
         }
     except Exception as e:
-        return {
-            "integration": integration_slug,
-            "redirect_url": redirect_url,
-            "connected": False,
-            "error": str(e),
-            "status": "failed"
-        }
+        raise Exception(f"Error authorizing integration: {str(e)}")
 
 
 def check_user_connections(user: User) -> Dict[str, any]:
@@ -96,7 +108,7 @@ def check_user_connections(user: User) -> Dict[str, any]:
     disconnected = []
 
     for toolkit in toolkits.items:
-        if toolkit.connection.is_active:
+        if toolkit and toolkit.connection and toolkit.connection.is_active:
             connected.append({
                 "name": toolkit.name,
                 "slug": toolkit.slug,

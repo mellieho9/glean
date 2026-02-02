@@ -45,7 +45,7 @@ def sign_in_with_oauth(
     }
 
 
-def exchange_code_for_session(code: str) -> Tuple[Optional[User], Optional[str]]:
+def exchange_code_for_session(code: str) -> Tuple[Optional[Dict], Optional[str]]:
     """
     Exchange OAuth authorization code for a user session.
     This is called in your OAuth callback endpoint.
@@ -54,14 +54,15 @@ def exchange_code_for_session(code: str) -> Tuple[Optional[User], Optional[str]]
         code: OAuth authorization code from the callback URL
 
     Returns:
-        Tuple of (User object, error message)
-        User will be None if authentication fails
+        Tuple of (session dict with user and tokens, error message)
+        Session dict will be None if authentication fails
 
     Example:
-        user, error = exchange_code_for_session(code="abc123...")
-        if user:
+        session, error = exchange_code_for_session(code="abc123...")
+        if session:
             # Success - user is authenticated
-            print(f"Logged in as {user.email}")
+            print(f"Logged in as {session['user']['email']}")
+            print(f"Access token: {session['access_token']}")
         else:
             print(f"Error: {error}")
     """
@@ -70,18 +71,27 @@ def exchange_code_for_session(code: str) -> Tuple[Optional[User], Optional[str]]
     try:
         response = client.auth.exchange_code_for_session({"auth_code": code})
 
-        if response.user:
+        if response.user and response.session:
             user = User(
                 id=response.user.id,
                 name=response.user.user_metadata.get("name", ""),
                 email=response.user.email or "",
                 supabase_oauth=response.user.app_metadata.get("provider", "")
             )
-            return user, None
+            return {
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "supabase_oauth": user.supabase_oauth
+                },
+                "access_token": response.session.access_token,
+                "refresh_token": response.session.refresh_token
+            }, None
         return None, "No user data returned from OAuth exchange"
 
     except Exception as e:
-        return None, f"OAuth exchange failed: {str(e)}"
+        raise Exception(f"OAuth exchange failed: {str(e)}")
 
 
 def get_current_user(access_token: str) -> Optional[User]:
@@ -107,8 +117,7 @@ def get_current_user(access_token: str) -> Optional[User]:
                 supabase_oauth=response.user.app_metadata.get("provider", "")
             )
     except Exception as e:
-        print(f"Error getting current user: {e}")
-    return None
+        raise Exception(f"Error getting current user: {e}")
 
 
 def sign_out(access_token: str) -> bool:
@@ -127,8 +136,7 @@ def sign_out(access_token: str) -> bool:
         client.auth.sign_out(access_token)
         return True
     except Exception as e:
-        print(f"Error signing out: {e}")
-        return False
+        raise Exception(f"Error signing out: {e}")
 
 
 def refresh_session(refresh_token: str) -> Optional[Dict[str, str]]:
@@ -152,5 +160,4 @@ def refresh_session(refresh_token: str) -> Optional[Dict[str, str]]:
                 "refresh_token": response.session.refresh_token
             }
     except Exception as e:
-        print(f"Error refreshing session: {e}")
-    return None
+        raise Exception(f"Error refreshing session: {e}")

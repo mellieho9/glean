@@ -60,6 +60,28 @@ def get_database_client(use_service_role: bool = False) -> Client:
     return database_client.client
 
 
+def get_authenticated_client(access_token: str) -> Client:
+    """
+    Create an authenticated Supabase client with user's access token.
+    This client will respect RLS policies based on the authenticated user.
+
+    Args:
+        access_token: User's JWT access token
+
+    Returns:
+        Authenticated Supabase Client instance
+    """
+    client_config = config.get_client_config()
+
+    client = create_client(
+        client_config["supabase_url"],
+        client_config["supabase_key"]
+    )
+    client.postgrest.auth(access_token)
+
+    return client
+
+
 def create_row(
     table_name: str,
     data: Dict[str, Any],
@@ -82,21 +104,13 @@ def create_row(
     try:
         result = client.table(table_name).insert(data).execute()
 
-        if result.data and len(result.data) > 0:
-            return {
+        return {
                 "success": True,
                 "data": result.data[0],
                 "message": f"Row created successfully in {table_name}"
             }
-        return {
-            "success": False,
-            "error": "No data returned from insert operation"
-        }
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error creating row: {str(e)}"
-        }
+        raise Exception(f"Error creating row: {str(e)}")
 
 
 def read_rows(
@@ -153,12 +167,7 @@ def read_rows(
             "message": f"Successfully queried {table_name}"
         }
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error reading rows: {str(e)}",
-            "data": [],
-            "count": 0
-        }
+        raise Exception(f"Error reading rows: {str(e)}")
 
 
 def update_rows(
@@ -197,12 +206,7 @@ def update_rows(
             "message": f"Successfully updated rows in {table_name}"
         }
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error updating rows: {str(e)}",
-            "data": [],
-            "count": 0
-        }
+        raise Exception(f"Error updating rows: {str(e)}")
 
 
 def delete_rows(
@@ -240,8 +244,4 @@ def delete_rows(
             "message": f"Successfully deleted {deleted_count} row(s) from {table_name}"
         }
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error deleting rows: {str(e)}",
-            "deleted_count": 0
-        }
+        raise Exception(f"Error deleting rows: {str(e)}")

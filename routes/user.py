@@ -10,10 +10,10 @@ from services.user import (
 )
 
 
-router = APIRouter(prefix="/api/auth", tags=["authentication"])
+router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/oauth/sign-in")
+@router.post("/oauth")
 async def oauth_sign_in(
     provider: str = Body(...),
     redirect_to: Optional[str] = Body(None),
@@ -44,21 +44,16 @@ async def oauth_callback(code: str = Query(...)) -> Dict[str, Any]:
     Exchange OAuth authorization code for a user session.
 
     Returns:
-        Dict with user data or error
+        Dict with user data and tokens
     """
-    user, error = exchange_code_for_session(code)
+    session, error = exchange_code_for_session(code)
 
     if error:
         raise HTTPException(status_code=401, detail=error)
 
     return {
         "message": "Authentication successful",
-        "user": {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "supabase_oauth": user.supabase_oauth
-        }
+        **session
     }
 
 
