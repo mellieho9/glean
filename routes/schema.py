@@ -23,7 +23,9 @@ async def list_sources(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list sources: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list sources: {str(e)}"
+        ) from e
 
 
 @router.get("/{integration}")
@@ -41,7 +43,9 @@ async def get_schema(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get schema: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get schema: {str(e)}"
+        ) from e
 
 
 @router.get("/{integration}/data")
@@ -61,7 +65,9 @@ async def read_data(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to read data: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read data: {str(e)}"
+        ) from e
 
 
 @router.post("/{integration}/data")
@@ -80,7 +86,9 @@ async def write_data(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to write data: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to write data: {str(e)}"
+        ) from e
 
 
 @router.patch("/{integration}/data/{record_id}")
@@ -100,4 +108,6 @@ async def update_data(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update data: {str(e)}"
+        ) from e

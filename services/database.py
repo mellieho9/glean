@@ -4,8 +4,7 @@ from utils.config import config
 
 
 class DatabaseClient:
-
-    _instance: Optional['DatabaseClient'] = None
+    _instance: Optional["DatabaseClient"] = None
     _client: Optional[Client] = None
     _service_client: Optional[Client] = None
 
@@ -18,8 +17,7 @@ class DatabaseClient:
         if self._client is None:
             client_config = config.get_client_config()
             self._client = create_client(
-                client_config["supabase_url"],
-                client_config["supabase_key"]
+                client_config["supabase_url"], client_config["supabase_key"]
             )
 
     @property
@@ -27,8 +25,7 @@ class DatabaseClient:
         if self._client is None:
             client_config = config.get_client_config()
             self._client = create_client(
-                client_config["supabase_url"],
-                client_config["supabase_key"]
+                client_config["supabase_url"], client_config["supabase_key"]
             )
         return self._client
 
@@ -36,8 +33,7 @@ class DatabaseClient:
     def service_client(self) -> Optional[Client]:
         service_config = config.get_client_config()
         return create_client(
-            service_config["supabase_url"],
-            service_config["supabase_key"]
+            service_config["supabase_url"], service_config["supabase_key"]
         )
 
 
@@ -51,19 +47,14 @@ def get_database_client(use_service_role: bool = False) -> Client:
 def get_authenticated_client(access_token: str) -> Client:
     client_config = config.get_client_config()
 
-    client = create_client(
-        client_config["supabase_url"],
-        client_config["supabase_key"]
-    )
+    client = create_client(client_config["supabase_url"], client_config["supabase_key"])
     client.postgrest.auth(access_token)
 
     return client
 
 
 def create_row(
-    table_name: str,
-    data: Dict[str, Any],
-    client: Optional[Client] = None
+    table_name: str, data: Dict[str, Any], client: Optional[Client] = None
 ) -> Dict[str, Any]:
     if client is None:
         client = get_database_client()
@@ -72,10 +63,10 @@ def create_row(
         result = client.table(table_name).insert(data).execute()
 
         return {
-                "success": True,
-                "data": result.data[0],
-                "message": f"Row created successfully in {table_name}"
-            }
+            "success": True,
+            "data": result.data[0],
+            "message": f"Row created successfully in {table_name}",
+        }
     except Exception as e:
         raise Exception(f"Error creating row: {str(e)}")
 
@@ -88,7 +79,7 @@ def read_rows(
     ascending: bool = True,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-    client: Optional[Client] = None
+    client: Optional[Client] = None,
 ) -> Dict[str, Any]:
     if client is None:
         client = get_database_client()
@@ -115,7 +106,7 @@ def read_rows(
             "success": True,
             "data": result.data,
             "count": len(result.data) if result.data else 0,
-            "message": f"Successfully queried {table_name}"
+            "message": f"Successfully queried {table_name}",
         }
     except Exception as e:
         raise Exception(f"Error reading rows: {str(e)}")
@@ -125,7 +116,7 @@ def update_rows(
     table_name: str,
     filters: Dict[str, Any],
     data: Dict[str, Any],
-    client: Optional[Client] = None
+    client: Optional[Client] = None,
 ) -> Dict[str, Any]:
     if client is None:
         client = get_database_client()
@@ -142,16 +133,14 @@ def update_rows(
             "success": True,
             "data": result.data,
             "count": len(result.data) if result.data else 0,
-            "message": f"Successfully updated rows in {table_name}"
+            "message": f"Successfully updated rows in {table_name}",
         }
     except Exception as e:
         raise Exception(f"Error updating rows: {str(e)}")
 
 
 def delete_rows(
-    table_name: str,
-    filters: Dict[str, Any],
-    client: Optional[Client] = None
+    table_name: str, filters: Dict[str, Any], client: Optional[Client] = None
 ) -> Dict[str, Any]:
     if client is None:
         client = get_database_client()
@@ -169,7 +158,7 @@ def delete_rows(
         return {
             "success": True,
             "deleted_count": deleted_count,
-            "message": f"Successfully deleted {deleted_count} row(s) from {table_name}"
+            "message": f"Successfully deleted {deleted_count} row(s) from {table_name}",
         }
     except Exception as e:
         raise Exception(f"Error deleting rows: {str(e)}")

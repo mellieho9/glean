@@ -14,27 +14,22 @@ class SchemaHandler(ABC):
 
     def get_available_actions(self) -> List[Dict[str, Any]]:
         tools = self.composio.tools.get(
-            user_id=self.user.id,
-            toolkits=[self.TOOLKIT_SLUG]
+            user_id=self.user.id, toolkits=[self.TOOLKIT_SLUG]
         )
         return [
             {
                 "name": tool.name,
-                "slug": tool.slug if hasattr(tool, 'slug') else tool.name,
-                "description": tool.description if hasattr(tool, 'description') else "",
+                "slug": tool.slug if hasattr(tool, "slug") else tool.name,
+                "description": tool.description if hasattr(tool, "description") else "",
             }
             for tool in tools
         ]
 
     def execute_action(
-        self,
-        action_slug: str,
-        arguments: Dict[str, Any]
+        self, action_slug: str, arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
         result = self.composio.tools.execute(
-            action_slug,
-            user_id=self.user.id,
-            arguments=arguments
+            action_slug, user_id=self.user.id, arguments=arguments
         )
         return result
 
@@ -44,33 +39,24 @@ class SchemaHandler(ABC):
 
     @abstractmethod
     def read_data(
-        self,
-        source_id: str,
-        query: Optional[str] = None,
-        limit: Optional[int] = None
+        self, source_id: str, query: Optional[str] = None, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod
-    def write_data(
-        self,
-        source_id: str,
-        data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def write_data(self, source_id: str, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         pass
 
     @abstractmethod
     def update_data(
-        self,
-        source_id: str,
-        record_id: str,
-        data: Dict[str, Any]
+        self, source_id: str, record_id: str, data: Dict[str, Any]
     ) -> Dict[str, Any]:
         pass
 
     @abstractmethod
     def list_sources(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
         pass
+
 
 def get_schema_handler(user: User, integration_slug: str) -> "SchemaHandler":
     from services.notion_handler import NotionHandler
@@ -82,6 +68,8 @@ def get_schema_handler(user: User, integration_slug: str) -> "SchemaHandler":
     slug = integration_slug.lower()
     if slug not in handlers:
         supported = ", ".join(handlers.keys())
-        raise ValueError(f"Unsupported integration: {integration_slug}. Supported: {supported}")
+        raise ValueError(
+            f"Unsupported integration: {integration_slug}. Supported: {supported}"
+        )
 
     return handlers[slug](user)

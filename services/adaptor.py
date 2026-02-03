@@ -25,8 +25,7 @@ def get_composio_client() -> Composio:
         if not api_key:
             raise ValueError("COMPOSIO_API_KEY environment variable not set")
         _composio_client = Composio(
-            api_key=api_key,
-            toolkit_versions=DEFAULT_TOOLKIT_VERSIONS
+            api_key=api_key, toolkit_versions=DEFAULT_TOOLKIT_VERSIONS
         )
     return _composio_client
 
@@ -36,10 +35,7 @@ def get_user_session(user: User, manage_connections: bool = False):
         return _user_sessions[user.id]
 
     composio = get_composio_client()
-    session = composio.create(
-        user_id=user.id,
-        manage_connections=manage_connections
-    )
+    session = composio.create(user_id=user.id, manage_connections=manage_connections)
     _user_sessions[user.id] = session
     return session
 
@@ -52,7 +48,7 @@ def authorize_integration(
     user: User,
     integration_slug: str,
     timeout_ms: int = 60000,
-    db_client: Optional[Client] = None
+    db_client: Optional[Client] = None,
 ) -> Dict[str, any]:
     session = get_user_session(user)
 
@@ -68,7 +64,7 @@ def authorize_integration(
             integration_data = {
                 "user_id": user.id,
                 "slug": integration_slug,
-                "composio_connection_id": connected_account.id
+                "composio_connection_id": connected_account.id,
             }
 
             print(f"DEBUG: Attempting to insert integration with user_id: {user.id}")
@@ -95,19 +91,18 @@ def check_user_connections(user: User) -> Dict[str, any]:
 
     for toolkit in toolkits.items:
         if toolkit and toolkit.connection and toolkit.connection.is_active:
-            connected.append({
-                "name": toolkit.name,
-                "slug": toolkit.slug,
-                "account_id": toolkit.connection.connected_account.id
-            })
+            connected.append(
+                {
+                    "name": toolkit.name,
+                    "slug": toolkit.slug,
+                    "account_id": toolkit.connection.connected_account.id,
+                }
+            )
         else:
-            disconnected.append({
-                "name": toolkit.name,
-                "slug": toolkit.slug
-            })
+            disconnected.append({"name": toolkit.name, "slug": toolkit.slug})
 
     return {
         "connected": connected,
         "disconnected": disconnected,
-        "total_connected": len(connected)
+        "total_connected": len(connected),
     }

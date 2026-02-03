@@ -5,33 +5,31 @@ from services.schema_handler import SchemaHandler
 
 
 class NotionHandler(SchemaHandler):
-
     TOOLKIT_SLUG = "NOTION"
 
     def __init__(self, user: User):
         super().__init__(user)
 
     def list_sources(
-        self,
-        query: Optional[str] = None,
-        filter_type: Optional[str] = None
+        self, query: Optional[str] = None, filter_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         arguments = {"get_databases": True}
         result = self.execute_action("NOTION_FETCH_DATA", arguments)
         data = result.get("data", {})
         sources = []
         for schema in data.get("results", []):
-            sources.append({
-                "id": schema.get("id"),
-                "title": schema.get("title")[0].get("plain_text"),
-                "properties": schema.get("properties", {})
-            })
+            sources.append(
+                {
+                    "id": schema.get("id"),
+                    "title": schema.get("title")[0].get("plain_text"),
+                    "properties": schema.get("properties", {}),
+                }
+            )
         return sources
 
     def get_schema(self, source_id: str) -> Dict[str, Any]:
         result = self.execute_action(
-            "NOTION_FETCH_DATABASE",
-            {"database_id": source_id}
+            "NOTION_FETCH_DATABASE", {"database_id": source_id}
         )
 
         database = result.get("data", {})
@@ -40,14 +38,14 @@ class NotionHandler(SchemaHandler):
         schema = {
             "id": database.get("id"),
             "title": self._extract_title(database.get("title", [])),
-            "properties": {}
+            "properties": {},
         }
 
         for prop_name, prop_def in properties.items():
             schema["properties"][prop_name] = {
                 "id": prop_def.get("id"),
                 "type": prop_def.get("type"),
-                "name": prop_name
+                "name": prop_name,
             }
 
             prop_type = prop_def.get("type")
@@ -61,10 +59,7 @@ class NotionHandler(SchemaHandler):
         return schema
 
     def read_data(
-        self,
-        source_id: str,
-        query: Optional[str] = None,
-        limit: Optional[int] = None
+        self, source_id: str, query: Optional[str] = None, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         arguments = {"database_id": source_id}
 
@@ -79,38 +74,27 @@ class NotionHandler(SchemaHandler):
                 "id": page.get("id"),
                 "created_time": page.get("created_time"),
                 "last_edited_time": page.get("last_edited_time"),
-                "properties": self._extract_properties(page.get("properties", {}))
+                "properties": self._extract_properties(page.get("properties", {})),
             }
             rows.append(row)
 
         return rows
 
-    def write_data(
-        self,
-        source_id: str,
-        data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def write_data(self, source_id: str, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         results = []
 
         for row in data:
             properties = self._convert_to_notion_properties(row)
             result = self.execute_action(
                 "NOTION_INSERT_ROW_DATABASE",
-                {"database_id": source_id, "properties": properties}
+                {"database_id": source_id, "properties": properties},
             )
             results.append(result)
 
-        return {
-            "success": True,
-            "created_count": len(results),
-            "results": results
-        }
+        return {"success": True, "created_count": len(results), "results": results}
 
     def update_data(
-        self,
-        source_id: str,
-        record_id: str,
-        data: Dict[str, Any]
+        self, source_id: str, record_id: str, data: Dict[str, Any]
     ) -> Dict[str, Any]:
         if not self._is_notion_format(data):
             properties = self._convert_to_notion_properties(data)
@@ -119,7 +103,7 @@ class NotionHandler(SchemaHandler):
 
         return self.execute_action(
             "NOTION_UPDATE_ROW_DATABASE",
-            {"page_id": record_id, "properties": properties}
+            {"page_id": record_id, "properties": properties},
         )
 
     def _extract_title(self, title_array: List[Dict]) -> str:
@@ -180,8 +164,17 @@ class NotionHandler(SchemaHandler):
             return False
 
         notion_types = [
-            "title", "rich_text", "number", "select", "multi_select",
-            "date", "checkbox", "url", "email", "phone_number", "status"
+            "title",
+            "rich_text",
+            "number",
+            "select",
+            "multi_select",
+            "date",
+            "checkbox",
+            "url",
+            "email",
+            "phone_number",
+            "status",
         ]
         for value in properties.values():
             if isinstance(value, dict) and any(t in value for t in notion_types):
