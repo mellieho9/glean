@@ -7,25 +7,6 @@ def sign_in_with_oauth(
     redirect_to: Optional[str] = None,
     scopes: Optional[str] = None
 ) -> Dict[str, any]:
-    """
-    Initiate OAuth sign-in flow with a third-party provider.
-
-    Args:
-        provider: OAuth provider name (e.g., "github", "google", "gitlab")
-        redirect_to: Optional URL to redirect to after successful authentication
-        scopes: Optional OAuth scopes to request (space-separated string)
-
-    Returns:
-        Dict containing the OAuth URL and provider info
-
-    Example:
-        response = sign_in_with_oauth(
-            provider="github",
-            redirect_to="https://example.com/auth/callback",
-            scopes="repo gist notifications"
-        )
-        # Returns: {"url": "https://...", "provider": "github"}
-    """
     client = get_database_client()
 
     options = {}
@@ -46,26 +27,6 @@ def sign_in_with_oauth(
 
 
 def exchange_code_for_session(code: str) -> Tuple[Optional[Dict], Optional[str]]:
-    """
-    Exchange OAuth authorization code for a user session.
-    This is called in your OAuth callback endpoint.
-
-    Args:
-        code: OAuth authorization code from the callback URL
-
-    Returns:
-        Tuple of (session dict with user and tokens, error message)
-        Session dict will be None if authentication fails
-
-    Example:
-        session, error = exchange_code_for_session(code="abc123...")
-        if session:
-            # Success - user is authenticated
-            print(f"Logged in as {session['user']['email']}")
-            print(f"Access token: {session['access_token']}")
-        else:
-            print(f"Error: {error}")
-    """
     client = get_database_client()
 
     try:
@@ -95,15 +56,6 @@ def exchange_code_for_session(code: str) -> Tuple[Optional[Dict], Optional[str]]
 
 
 def get_current_user(access_token: str) -> Optional[User]:
-    """
-    Get the current authenticated user from an access token.
-
-    Args:
-        access_token: The JWT access token from the session
-
-    Returns:
-        User object if valid token, None otherwise
-    """
     client = get_database_client()
 
     try:
@@ -121,15 +73,6 @@ def get_current_user(access_token: str) -> Optional[User]:
 
 
 def sign_out(access_token: str) -> bool:
-    """
-    Sign out the current user and invalidate their session.
-
-    Args:
-        access_token: The JWT access token from the session
-
-    Returns:
-        True if sign out successful, False otherwise
-    """
     client = get_database_client()
 
     try:
@@ -140,15 +83,6 @@ def sign_out(access_token: str) -> bool:
 
 
 def refresh_session(refresh_token: str) -> Optional[Dict[str, str]]:
-    """
-    Refresh an expired access token using a refresh token.
-
-    Args:
-        refresh_token: The refresh token from the session
-
-    Returns:
-        Dict with new access_token and refresh_token, or None if refresh fails
-    """
     client = get_database_client()
 
     try:

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from routes.user import router as user_router
-from routes.adaptor import router as adaptor_router
+# from routes.adaptor import router as adaptor_router
+from routes.schema import router as schema_router
 
 app = FastAPI(
     title="Glean API",
@@ -8,6 +9,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Include routers
 app.include_router(user_router)
-app.include_router(adaptor_router)
+# app.include_router(adaptor_router)
+app.include_router(schema_router)

@@ -1,11 +1,9 @@
-"""Supabase database connection and client management."""
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from supabase import create_client, Client
 from utils.config import config
 
 
 class DatabaseClient:
-    """Singleton database client for Supabase."""
 
     _instance: Optional['DatabaseClient'] = None
     _client: Optional[Client] = None
@@ -26,7 +24,6 @@ class DatabaseClient:
 
     @property
     def client(self) -> Client:
-        """Get the standard Supabase client."""
         if self._client is None:
             client_config = config.get_client_config()
             self._client = create_client(
@@ -45,15 +42,6 @@ class DatabaseClient:
 
 
 def get_database_client(use_service_role: bool = False) -> Client:
-    """
-    Get Supabase database client for dependency injection.
-
-    Args:
-        use_service_role: If True, use service role key (admin operations)
-
-    Returns:
-        Supabase Client instance
-    """
     database_client = DatabaseClient()
     if use_service_role and database_client.service_client:
         return database_client.service_client
@@ -61,16 +49,6 @@ def get_database_client(use_service_role: bool = False) -> Client:
 
 
 def get_authenticated_client(access_token: str) -> Client:
-    """
-    Create an authenticated Supabase client with user's access token.
-    This client will respect RLS policies based on the authenticated user.
-
-    Args:
-        access_token: User's JWT access token
-
-    Returns:
-        Authenticated Supabase Client instance
-    """
     client_config = config.get_client_config()
 
     client = create_client(
@@ -87,17 +65,6 @@ def create_row(
     data: Dict[str, Any],
     client: Optional[Client] = None
 ) -> Dict[str, Any]:
-    """
-    Create a new row in the specified table.
-
-    Args:
-        table_name: Name of the table
-        data: Row data to insert
-        client: Optional Supabase client (defaults to standard client)
-
-    Returns:
-        Dict with success, data/error, and message
-    """
     if client is None:
         client = get_database_client()
 
@@ -123,22 +90,6 @@ def read_rows(
     offset: Optional[int] = None,
     client: Optional[Client] = None
 ) -> Dict[str, Any]:
-    """
-    Read rows from the specified table.
-
-    Args:
-        table_name: Name of the table
-        filters: Dict of column:value filters
-        select: Columns to select (default: "*")
-        order_by: Column to order by
-        ascending: Sort ascending if True, descending if False
-        limit: Max number of rows to return
-        offset: Number of rows to skip
-        client: Optional Supabase client (defaults to standard client)
-
-    Returns:
-        Dict with success, data/error, count, and message
-    """
     if client is None:
         client = get_database_client()
 
@@ -176,18 +127,6 @@ def update_rows(
     data: Dict[str, Any],
     client: Optional[Client] = None
 ) -> Dict[str, Any]:
-    """
-    Update rows in the specified table.
-
-    Args:
-        table_name: Name of the table
-        filters: Dict of column:value filters to identify rows
-        data: Data to update
-        client: Optional Supabase client (defaults to standard client)
-
-    Returns:
-        Dict with success, data/error, count, and message
-    """
     if client is None:
         client = get_database_client()
 
@@ -214,17 +153,6 @@ def delete_rows(
     filters: Dict[str, Any],
     client: Optional[Client] = None
 ) -> Dict[str, Any]:
-    """
-    Delete rows from the specified table.
-
-    Args:
-        table_name: Name of the table
-        filters: Dict of column:value filters to identify rows
-        client: Optional Supabase client (defaults to standard client)
-
-    Returns:
-        Dict with success, deleted_count, and message/error
-    """
     if client is None:
         client = get_database_client()
 

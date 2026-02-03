@@ -1,4 +1,3 @@
-"""FastAPI routes for user authentication (Supabase OAuth)."""
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Query, Body
 from services.user import (
@@ -19,12 +18,6 @@ async def oauth_sign_in(
     redirect_to: Optional[str] = Body(None),
     scopes: Optional[str] = Body(None)
 ) -> Dict[str, Any]:
-    """
-    Initiate OAuth sign-in flow with a third-party provider.
-
-    Returns:
-        Dict with url and provider
-    """
     try:
         return sign_in_with_oauth(
             provider=provider,
@@ -59,12 +52,6 @@ async def oauth_callback(code: str = Query(...)) -> Dict[str, Any]:
 
 @router.get("/user")
 async def get_user(access_token: str = Query(...)) -> Dict[str, Any]:
-    """
-    Get the current authenticated user from an access token.
-
-    Returns:
-        Dict with user data
-    """
     user = get_current_user(access_token)
 
     if not user:
@@ -83,7 +70,6 @@ async def get_user(access_token: str = Query(...)) -> Dict[str, Any]:
 
 @router.post("/sign-out")
 async def sign_out_endpoint(access_token: str = Body(...)) -> Dict[str, str]:
-    """Sign out the current user and invalidate their session."""
     success = sign_out(access_token)
 
     if not success:
@@ -94,12 +80,6 @@ async def sign_out_endpoint(access_token: str = Body(...)) -> Dict[str, str]:
 
 @router.post("/refresh")
 async def refresh_token(refresh_token: str = Body(...)) -> Dict[str, Any]:
-    """
-    Refresh an expired access token using a refresh token.
-
-    Returns:
-        Dict with access_token and refresh_token
-    """
     result = refresh_session(refresh_token)
 
     if not result:
