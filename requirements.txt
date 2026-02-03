@@ -1,0 +1,7 @@
+supabase
+fastapi
+pydantic
+python-dotenv
+uvicorn
+composio
+ruff
