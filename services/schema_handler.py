@@ -18,7 +18,7 @@ class SchemaHandler(ABC):
         )
         return [
             {
-                "name": tool.name,
+                "name": getattr(tool, "name", ""),
                 "slug": tool.slug if hasattr(tool, "slug") else tool.name,
                 "description": tool.description if hasattr(tool, "description") else "",
             }

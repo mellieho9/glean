@@ -31,10 +31,14 @@ class DatabaseClient:
 
     @property
     def service_client(self) -> Optional[Client]:
-        service_config = config.get_client_config()
-        return create_client(
-            service_config["supabase_url"], service_config["supabase_key"]
-        )
+        if self._service_client is None:
+            service_config = config.get_service_client_config()
+            if service_config is None:
+                return None
+            self._service_client = create_client(
+                service_config["supabase_url"], service_config["supabase_key"]
+            )
+        return self._service_client
 
 
 def get_database_client(use_service_role: bool = False) -> Client:
@@ -61,14 +65,14 @@ def create_row(
 
     try:
         result = client.table(table_name).insert(data).execute()
-
+        created_data = result.data[0] if result.data else data
         return {
             "success": True,
-            "data": result.data[0],
+            "data": created_data,
             "message": f"Row created successfully in {table_name}",
         }
     except Exception as e:
-        raise Exception(f"Error creating row: {str(e)}")
+        raise Exception(f"Error creating row: {str(e)}") from e
 
 
 def read_rows(
@@ -122,12 +126,10 @@ def update_rows(
         client = get_database_client()
 
     try:
-        query = client.table(table_name)
-
+        query = client.table(table_name).update(data)
         for key, value in filters.items():
             query = query.eq(key, value)
-
-        result = query.update(data).execute()
+        result = query.execute()
 
         return {
             "success": True,
@@ -146,12 +148,10 @@ def delete_rows(
         client = get_database_client()
 
     try:
-        query = client.table(table_name)
-
+        query = client.table(table_name).delete()
         for key, value in filters.items():
             query = query.eq(key, value)
-
-        result = query.delete().execute()
+        result = query.execute()
 
         deleted_count = len(result.data) if result.data else 0
 

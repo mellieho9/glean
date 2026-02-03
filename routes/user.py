@@ -1,5 +1,11 @@
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Query, Body
+from typing import Dict, Any, Optionalfrom fastapi import Header
+
+@router.get("/user")
+async def get_user(authorization: str = Header(...)) -> Dict[str, Any]:
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    access_token = authorization.replace("Bearer ", "", 1)
+    user = get_current_user(access_token)from fastapi import APIRouter, HTTPException, Query, Body
 from services.user import (
     sign_in_with_oauth,
     exchange_code_for_session,
@@ -23,8 +29,10 @@ async def oauth_sign_in(
             provider=provider, redirect_to=redirect_to, scopes=scopes
         )
     except Exception as e:
+        # Log the actual error for debugging
+        # logger.error(f"OAuth initiation failed: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to initiate OAuth: {str(e)}"
+            status_code=500, detail="Failed to initiate OAuth"
         )
 
 
@@ -61,8 +69,8 @@ async def get_user(access_token: str = Query(...)) -> Dict[str, Any]:
 
 @router.post("/sign-out")
 async def sign_out_endpoint(access_token: str = Body(...)) -> Dict[str, str]:
-    success = sign_out(access_token)
-
+@router.post("/refresh")
+async def refresh_token_endpoint(refresh_token: str = Body(...)) -> Dict[str, Any]:
     if not success:
         raise HTTPException(status_code=500, detail="Failed to sign out")
 

@@ -12,6 +12,6 @@ class Schema(BaseModel):
     source_id: str
     user_id: str
     version: int
-    schema: Dict[str, Any]  # The actual schema JSON
+    schema_data: Dict[str, Any]  # The actual schema JSON
     slug: str
     prompt: str

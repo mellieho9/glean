@@ -21,7 +21,7 @@ class NotionHandler(SchemaHandler):
             sources.append(
                 {
                     "id": schema.get("id"),
-                    "title": schema.get("title")[0].get("plain_text"),
+                    "title": self._extract_title(schema.get("title", [])),
                     "properties": schema.get("properties", {}),
                 }
             )
@@ -82,16 +82,37 @@ class NotionHandler(SchemaHandler):
 
     def write_data(self, source_id: str, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         results = []
+        errors = []
+        created_count = 0
+        failed_count = 0
 
-        for row in data:
+        for i, row in enumerate(data):
             properties = self._convert_to_notion_properties(row)
             result = self.execute_action(
                 "NOTION_INSERT_ROW_DATABASE",
                 {"database_id": source_id, "properties": properties},
             )
+
+            is_success = result.get("successful", True) and not result.get("error")
+            if is_success:
+                created_count += 1
+            else:
+                failed_count += 1
+                errors.append({
+                    "index": i,
+                    "error": result.get("error") or result.get("data", {}).get("message"),
+                    "row": row
+                })
+
             results.append(result)
 
-        return {"success": True, "created_count": len(results), "results": results}
+        return {
+            "success": failed_count == 0,
+            "created_count": created_count,
+            "failed_count": failed_count,
+            "errors": errors,
+            "results": results
+        }
 
     def update_data(
         self, source_id: str, record_id: str, data: Dict[str, Any]

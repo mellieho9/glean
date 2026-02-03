@@ -51,7 +51,7 @@ def exchange_code_for_session(code: str) -> Tuple[Optional[Dict], Optional[str]]
         return None, "No user data returned from OAuth exchange"
 
     except Exception as e:
-        raise Exception(f"OAuth exchange failed: {str(e)}")
+        return None, f"OAuth exchange failed: {str(e)}"
 
 
 def get_current_user(access_token: str) -> Optional[User]:

@@ -1,7 +1,7 @@
 supabase
 fastapi
 pydantic
-python - dotenv
+python-dotenv
 uvicorn
 composio
 ruff
