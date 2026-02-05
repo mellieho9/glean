@@ -37,24 +37,46 @@ class QuestionGenerationOutput(BaseModel):
 
 class FieldSchema(BaseModel):
     """Schema definition for a single extracted field"""
+    field_name: str = Field(description="Name of the field")
     type: Literal["string", "number", "array", "boolean", "place"]
     description: str
     required: bool = True
     constraints: Optional[str] = None
+
+
+class FieldMapping(BaseModel):
+    """Maps an extracted field name to a database column name"""
+    extracted_field: str = Field(description="Field name in extraction output")
+    database_column: str = Field(description="Column name in the database")
+
+
+class ToolRequirement(BaseModel):
+    """Specifies a grounding tool requirement for extraction"""
+    tool_name: Literal["google_maps", "google_search"] = Field(
+        description="Name of the grounding tool"
+    )
+    usage_hint: str = Field(
+        description="When and how the extraction agent should use this tool"
+    )
+
 
 class ExtractionConfig(BaseModel):
     """Frozen extraction configuration for a database"""
     extraction_prompt: str = Field(
         description="The exact prompt to use for all extractions"
     )
-    output_schema: Dict[str, FieldSchema] = Field(
+    output_schema: List[FieldSchema] = Field(
         description="Schema definition for each output field"
     )
-    field_mappings: Dict[str, str] = Field(
+    field_mappings: List[FieldMapping] = Field(
         description="Maps extracted field names to database column names"
     )
     classification_hints: List[str] = Field(
         description="Keywords that identify this content type for routing"
+    )
+    required_tools: List[ToolRequirement] = Field(
+        default_factory=list,
+        description="Grounding tools needed for accurate extraction"
     )
 
 # ============================================
