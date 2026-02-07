@@ -14,15 +14,15 @@ class Config:
             "SUPABASE_SERVICE_ROLE_KEY"
         )
         # Gemini
-        self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+        self.google_genai_api_key: str = os.getenv("GOOGLE_GENAI_API_KEY", "")
 
     def validate(self) -> bool:
         if not self.supabase_url:
             raise ValueError("SUPABASE_URL environment variable is required")
         if not self.supabase_key:
             raise ValueError("SUPABASE_KEY environment variable is required")
-        if not self.gemini_api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is required")
+        if not self.google_genai_api_key:
+            raise ValueError("GOOGLE_GENAI_API_KEY environment variable is required")
         return True
 
     def get_client_config(self) -> dict:

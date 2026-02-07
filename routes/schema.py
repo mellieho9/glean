@@ -23,7 +23,6 @@ async def list_sources(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        # TODO: Add proper logging here: logger.exception("Failed to list sources")
         raise HTTPException(
             status_code=500, detail="Failed to list sources"
         ) from e

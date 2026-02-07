@@ -47,6 +47,6 @@ Call the appropriate tool when you need verified information beyond what's in th
         model="gemini-3-flash-preview",
         instruction=full_instruction,
         description="Extracts structured data from YouTube videos",
-        tools=tools if tools else None,
+        tools=tools,
         output_key="extracted_content"
     )

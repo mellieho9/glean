@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
+from dataclasses import dataclass
 
 # ============================================
 # Question Generation Agent Schemas
@@ -124,3 +125,15 @@ class CritiqueOutput(BaseModel):
         ge=0.0,
         le=1.0
     )
+
+# ============================================
+# Processing Result
+# ============================================
+
+@dataclass
+class ProcessingResult:
+    success: bool
+    extracted_data: Optional[dict] = None
+    critique: Optional[dict] = None
+    attempts: int = 0
+    error: Optional[str] = None
