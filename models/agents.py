@@ -2,12 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 from dataclasses import dataclass
 
-# ============================================
-# Question Generation Agent Schemas
-# ============================================
-
 class Question(BaseModel):
-    """A single clarifying question for the user"""
     id: str = Field(description="Unique identifier like q1, q2, etc.")
     field: str = Field(description="The schema field this relates to, or 'general'")
     question: str = Field(description="The question to ask the user")
@@ -22,19 +17,14 @@ class Question(BaseModel):
     default_suggestion: Any = Field(description="Reasonable default if user skips")
 
 class QuestionGenerationOutput(BaseModel):
-    """Output from Question Generation Agent"""
     schema_summary: str = Field(
         description="Brief description of what this database captures"
     )
     questions: List[Question] = Field(
-        description="4-8 clarifying questions for the user",
+        description="3-8 clarifying questions for the user",
         min_length=3,
         max_length=8
     )
-
-# ============================================
-# Prompt Generation Agent Schemas
-# ============================================
 
 class FieldSchema(BaseModel):
     """Schema definition for a single extracted field"""
@@ -44,7 +34,6 @@ class FieldSchema(BaseModel):
     required: bool = True
     constraints: Optional[str] = None
 
-
 class FieldMapping(BaseModel):
     """Maps an extracted field name to a database column name"""
     extracted_field: str = Field(description="Field name in extraction output")
@@ -52,7 +41,6 @@ class FieldMapping(BaseModel):
 
 
 class ToolRequirement(BaseModel):
-    """Specifies a grounding tool requirement for extraction"""
     tool_name: Literal["google_maps", "google_search"] = Field(
         description="Name of the grounding tool"
     )
@@ -62,7 +50,6 @@ class ToolRequirement(BaseModel):
 
 
 class ExtractionConfig(BaseModel):
-    """Frozen extraction configuration for a database"""
     extraction_prompt: str = Field(
         description="The exact prompt to use for all extractions"
     )
@@ -80,13 +67,6 @@ class ExtractionConfig(BaseModel):
         description="Grounding tools needed for accurate extraction"
     )
 
-# ============================================
-# Content Extraction Agent Schemas
-# ============================================
-
-# Note: Extraction output is dynamic based on the frozen config
-# We validate against the stored output_schema at runtime
-
 class ExtractionOutput(BaseModel):
     """Wrapper for dynamic extraction results"""
     data: Dict[str, Any] = Field(description="Extracted data matching the schema")
@@ -96,12 +76,7 @@ class ExtractionOutput(BaseModel):
         le=1.0
     )
 
-# ============================================
-# Critique Agent Schemas
-# ============================================
-
 class ValidationIssue(BaseModel):
-    """A single validation issue found"""
     field: str = Field(description="Field name with the issue")
     issue: str = Field(description="Description of the problem")
     severity: Literal["critical", "warning"] = Field(
@@ -110,7 +85,6 @@ class ValidationIssue(BaseModel):
     suggestion: str = Field(description="How to fix this issue")
 
 class CritiqueOutput(BaseModel):
-    """Output from Critique Agent"""
     valid: bool = Field(description="Whether the extraction is acceptable")
     issues: List[ValidationIssue] = Field(
         default_factory=list,
@@ -125,10 +99,6 @@ class CritiqueOutput(BaseModel):
         ge=0.0,
         le=1.0
     )
-
-# ============================================
-# Processing Result
-# ============================================
 
 @dataclass
 class ProcessingResult:

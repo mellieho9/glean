@@ -23,8 +23,6 @@ async def oauth_sign_in(
             provider=provider, redirect_to=redirect_to, scopes=scopes
         )
     except Exception:
-        # Log the actual error for debugging
-        # logger.error(f"OAuth initiation failed: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to initiate OAuth"
         )
@@ -32,12 +30,6 @@ async def oauth_sign_in(
 
 @router.get("/oauth/callback")
 async def oauth_callback(code: str = Query(...)) -> Dict[str, Any]:
-    """
-    Exchange OAuth authorization code for a user session.
-
-    Returns:
-        Dict with user data and tokens
-    """
     session, error = exchange_code_for_session(code)
 
     if error:

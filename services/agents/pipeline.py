@@ -61,12 +61,18 @@ Generate clarifying questions for this database schema.
 
     state_result = session.state.get("generated_questions")
     if state_result:
-        return state_result
+        if isinstance(state_result, QuestionGenerationOutput):
+            return state_result
+        return QuestionGenerationOutput(**state_result)
 
     if final_response:
-        return json.loads(final_response)
+        try:
+            parsed = json.loads(final_response)
+            return QuestionGenerationOutput(**parsed)
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Failed to parse question generation response: {e}")
 
-    return None
+    raise ValueError("No response received from question generation agent")
 
 
 async def run_prompt_generation(
@@ -117,19 +123,28 @@ Generate the frozen extraction configuration.
 
     state_result = session.state.get("extraction_config")
     if state_result:
-        return state_result
+        if isinstance(state_result, ExtractionConfig):
+            return state_result
+        return ExtractionConfig(**state_result)
 
     if final_response:
-        return json.loads(final_response)
+        try:
+            parsed = json.loads(final_response)
+            return ExtractionConfig(**parsed)
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Failed to parse extraction config response: {e}")
 
-    return None
+    raise ValueError("No response received from prompt generation agent")
 
 def _apply_field_mappings(data: dict, field_mappings: list) -> dict:
     mapping = {}
     for m in field_mappings:
-        extracted = m["extracted_field"] if isinstance(m, dict) else m.extracted_field
-        database = m["database_column"] if isinstance(m, dict) else m.database_column
-        mapping[extracted] = database
+        try:
+            extracted = m["extracted_field"] if isinstance(m, dict) else m.extracted_field
+            database = m["database_column"] if isinstance(m, dict) else m.database_column
+            mapping[extracted] = database
+        except Exception as e:
+            raise Exception(f"Error mapping fields: {str(e)}")
     return {mapping.get(k, k): v for k, v in data.items()}
 
 
@@ -191,13 +206,20 @@ async def process_video(
             if event.is_final_response():
                 pass
 
-        session = await session_service.get_session(
-            app_name="glean",
-            user_id="user",
-            session_id=session.id
-        )
-
         raw_content = session.state.get("extracted_content")
+        critique_result = session.state.get("critique_result")
+
+        if raw_content is None:
+            return ProcessingResult(
+                success=False,
+                error="No extracted content found in session state",
+                attempts=session.state.get("loop_iteration", 1),
+            )
+
+        try:
+            extracted_data = _parse_extracted_data(raw_content)
+        except (json.JSONDecodeError, TypeError):
+            extracted_data = {"raw_output": raw_content, "parse_error": True}
         critique_result = session.state.get("critique_result")
 
         try:

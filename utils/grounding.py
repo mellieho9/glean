@@ -39,7 +39,7 @@ _search_agent = LlmAgent(
         "When queried, provide:\n"
         "- Factual information from reliable sources\n"
         "- Current data (prices, availability, events)\n"
-        "- Additional context not available in the video\n\n"
+        "- Additional relevant context\n\n"
         "Be concise and cite sources when relevant. "
         "If information cannot be found, say so clearly."
     ),
