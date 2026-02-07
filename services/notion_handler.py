@@ -81,16 +81,22 @@ class NotionHandler(SchemaHandler):
         return rows
 
     def write_data(self, source_id: str, data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        schema = self.get_schema(source_id)
+        prop_types = {
+            name: info.get("type", "rich_text")
+            for name, info in schema.get("properties", {}).items()
+        }
+
         results = []
         errors = []
         created_count = 0
         failed_count = 0
 
         for i, row in enumerate(data):
-            properties = self._convert_to_notion_properties(row)
+            properties_list = self._convert_to_composio_properties(row, prop_types)
             result = self.execute_action(
                 "NOTION_INSERT_ROW_DATABASE",
-                {"database_id": source_id, "properties": properties},
+                {"database_id": source_id, "properties": properties_list},
             )
 
             is_success = result.get("successful", True) and not result.get("error")
@@ -98,11 +104,14 @@ class NotionHandler(SchemaHandler):
                 created_count += 1
             else:
                 failed_count += 1
-                errors.append({
-                    "index": i,
-                    "error": result.get("error") or result.get("data", {}).get("message"),
-                    "row": row
-                })
+                errors.append(
+                    {
+                        "index": i,
+                        "error": result.get("error")
+                        or result.get("data", {}).get("message"),
+                        "row": row,
+                    }
+                )
 
             results.append(result)
 
@@ -111,7 +120,7 @@ class NotionHandler(SchemaHandler):
             "created_count": created_count,
             "failed_count": failed_count,
             "errors": errors,
-            "results": results
+            "results": results,
         }
 
     def update_data(
@@ -162,6 +171,17 @@ class NotionHandler(SchemaHandler):
             status = prop.get("status")
             return status.get("name") if status else None
         return prop.get(prop_type)
+
+    def _convert_to_composio_properties(
+        self, data: Dict[str, Any], prop_types: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
+        properties = []
+        for key, value in data.items():
+            if value is None:
+                continue
+            notion_type = prop_types.get(key, "rich_text")
+            properties.append({"name": key, "type": notion_type, "value": value})
+        return properties
 
     def _convert_to_notion_properties(self, data: Dict[str, Any]) -> Dict[str, Any]:
         properties = {}

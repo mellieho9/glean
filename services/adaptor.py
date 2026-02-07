@@ -87,19 +87,18 @@ def check_user_connections(user: User) -> Dict[str, any]:
 
     for toolkit in toolkits.items:
         if toolkit and toolkit.connection and toolkit.connection.is_active:
-            connected.append({
-                "name": toolkit.name,
-                "slug": toolkit.slug,
-                "account_id": toolkit.connection.connected_account.id
-            })
+            connected.append(
+                {
+                    "name": toolkit.name,
+                    "slug": toolkit.slug,
+                    "account_id": toolkit.connection.connected_account.id,
+                }
+            )
         else:
-            disconnected.append({
-                "name": toolkit.name,
-                "slug": toolkit.slug
-            })
+            disconnected.append({"name": toolkit.name, "slug": toolkit.slug})
 
     return {
         "connected": connected,
         "disconnected": disconnected,
-        "total_connected": len(connected)
+        "total_connected": len(connected),
     }
