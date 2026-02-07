@@ -23,9 +23,7 @@ async def oauth_sign_in(
             provider=provider, redirect_to=redirect_to, scopes=scopes
         )
     except Exception:
-        raise HTTPException(
-            status_code=500, detail="Failed to initiate OAuth"
-        )
+        raise HTTPException(status_code=500, detail="Failed to initiate OAuth")
 
 
 @router.get("/oauth/callback")

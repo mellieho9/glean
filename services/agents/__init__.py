@@ -5,7 +5,7 @@ from services.agents.critique import create_critique_agent
 from services.agents.pipeline import (
     run_onboarding_chain,
     run_prompt_generation,
-    process_video
+    process_video,
 )
 
 __all__ = [

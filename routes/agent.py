@@ -30,7 +30,9 @@ def _get_schema_row(user_id: str, source_id: str) -> Dict[str, Any]:
     )
     rows = result.get("data", [])
     if not rows:
-        raise HTTPException(status_code=404, detail="Schema not configured for this source")
+        raise HTTPException(
+            status_code=404, detail="Schema not configured for this source"
+        )
     return rows[0]
 
 
@@ -51,7 +53,9 @@ async def generate_questions(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Question generation failed: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Question generation failed: {str(e)}"
+        ) from e
 
 
 @router.post("/{integration}/onboarding/configure")
@@ -97,20 +101,30 @@ async def configure_schema(
                 client=db_client,
             )
         else:
-            create_row("schemas", {
-                "source_id": source_id,
-                "user_id": user.id,
-                "version": 1,
-                "schema": schema,
-                "slug": integration,
-                "prompt": json.dumps(config_dict),
-            }, client=db_client)
+            create_row(
+                "schemas",
+                {
+                    "source_id": source_id,
+                    "user_id": user.id,
+                    "version": 1,
+                    "schema": schema,
+                    "slug": integration,
+                    "prompt": json.dumps(config_dict),
+                },
+                client=db_client,
+            )
 
-        return {"source_id": source_id, "configured": True, "extraction_config": config_dict}
+        return {
+            "source_id": source_id,
+            "configured": True,
+            "extraction_config": config_dict,
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Configuration failed: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Configuration failed: {str(e)}"
+        ) from e
 
 
 @router.post("/{integration}/process")
@@ -124,7 +138,9 @@ async def process_video_endpoint(
     try:
         schema_row = _get_schema_row(user.id, source_id)
         raw_prompt = schema_row["prompt"]
-        extraction_config = json.loads(raw_prompt) if isinstance(raw_prompt, str) else raw_prompt
+        extraction_config = (
+            json.loads(raw_prompt) if isinstance(raw_prompt, str) else raw_prompt
+        )
 
         handler = get_schema_handler(user, integration)
         result = await process_video(
@@ -146,4 +162,6 @@ async def process_video_endpoint(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Video processing failed: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Video processing failed: {str(e)}"
+        ) from e

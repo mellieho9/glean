@@ -17,9 +17,7 @@ from services.schema_handler import SchemaHandler
 
 
 async def run_onboarding_chain(
-    schema: dict,
-    tag: str,
-    db_type: str = "notion"
+    schema: dict, tag: str, db_type: str = "notion"
 ) -> QuestionGenerationOutput:
     session_service = InMemorySessionService()
     runner = Runner(
@@ -39,10 +37,7 @@ Database Type: {db_type}
 Generate clarifying questions for this database schema.
 """
 
-    session = await session_service.create_session(
-        app_name="glean",
-        user_id="system"
-    )
+    session = await session_service.create_session(app_name="glean", user_id="system")
 
     content = types.Content(
         role="user",
@@ -56,8 +51,11 @@ Generate clarifying questions for this database schema.
         new_message=content,
     ):
         if event.is_final_response():
-            final_response = event.content.parts[0].text if event.content and event.content.parts else None
-            
+            final_response = (
+                event.content.parts[0].text
+                if event.content and event.content.parts
+                else None
+            )
 
     state_result = session.state.get("generated_questions")
     if state_result:
@@ -76,10 +74,7 @@ Generate clarifying questions for this database schema.
 
 
 async def run_prompt_generation(
-    schema: dict,
-    tag: str,
-    user_answers: dict,
-    db_type: str = "notion"
+    schema: dict, tag: str, user_answers: dict, db_type: str = "notion"
 ) -> ExtractionConfig:
     session_service = InMemorySessionService()
     runner = Runner(
@@ -102,10 +97,7 @@ Database Type: {db_type}
 Generate the frozen extraction configuration.
 """
 
-    session = await session_service.create_session(
-        app_name="glean",
-        user_id="system"
-    )
+    session = await session_service.create_session(app_name="glean", user_id="system")
 
     content = types.Content(
         role="user",
@@ -119,7 +111,11 @@ Generate the frozen extraction configuration.
         new_message=content,
     ):
         if event.is_final_response():
-            final_response = event.content.parts[0].text if event.content and event.content.parts else None
+            final_response = (
+                event.content.parts[0].text
+                if event.content and event.content.parts
+                else None
+            )
 
     state_result = session.state.get("extraction_config")
     if state_result:
@@ -136,12 +132,17 @@ Generate the frozen extraction configuration.
 
     raise ValueError("No response received from prompt generation agent")
 
+
 def _apply_field_mappings(data: dict, field_mappings: list) -> dict:
     mapping = {}
     for m in field_mappings:
         try:
-            extracted = m["extracted_field"] if isinstance(m, dict) else m.extracted_field
-            database = m["database_column"] if isinstance(m, dict) else m.database_column
+            extracted = (
+                m["extracted_field"] if isinstance(m, dict) else m.extracted_field
+            )
+            database = (
+                m["database_column"] if isinstance(m, dict) else m.database_column
+            )
             mapping[extracted] = database
         except Exception as e:
             raise Exception(f"Error mapping fields: {str(e)}")
@@ -175,7 +176,7 @@ async def process_video(
             create_extraction_agent(extraction_config),
             create_critique_agent(output_schema),
         ],
-        max_iterations=max_retries + 1
+        max_iterations=max_retries + 1,
     )
 
     runner = Runner(
@@ -184,16 +185,15 @@ async def process_video(
         session_service=session_service,
     )
 
-    session = await session_service.create_session(
-        app_name="glean",
-        user_id="user"
-    )
+    session = await session_service.create_session(app_name="glean", user_id="user")
 
     content = types.Content(
         role="user",
         parts=[
             types.Part(file_data=types.FileData(file_uri=youtube_url)),
-            types.Part(text="Extract information from this video following the instructions. Output valid JSON."),
+            types.Part(
+                text="Extract information from this video following the instructions. Output valid JSON."
+            ),
         ],
     )
 
@@ -237,10 +237,16 @@ async def process_video(
         wrote_successfully = False
         write_error = None
         if critique_valid and extracted_data and not extracted_data.get("parse_error"):
-            mapped_data = _apply_field_mappings(extracted_data, field_mappings) if field_mappings else extracted_data
+            mapped_data = (
+                _apply_field_mappings(extracted_data, field_mappings)
+                if field_mappings
+                else extracted_data
+            )
             try:
                 result = handler.write_data(source_id, [mapped_data])
-                wrote_successfully = result.get("success", False) if isinstance(result, dict) else False
+                wrote_successfully = (
+                    result.get("success", False) if isinstance(result, dict) else False
+                )
                 if not wrote_successfully:
                     write_error = f"Write failed: {result}"
             except Exception as e:
@@ -260,5 +266,3 @@ async def process_video(
             error=f"Processing failed: {str(e)}",
             attempts=0,
         )
-
-

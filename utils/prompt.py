@@ -1,7 +1,3 @@
-# ============================================
-# QUESTION GENERATION AGENT
-# ============================================
-
 QUESTION_GENERATION_INSTRUCTION = """You are a Schema Analysis Agent for Glean. Your job is to analyze a database schema and generate smart clarifying questions that will help create a perfect extraction prompt.
 
 ## Your Goal:
@@ -37,10 +33,6 @@ For each non-obvious field, ask:
 
 You will receive the database schema and tag. Output your questions as structured JSON.
 """
-
-# ============================================
-# PROMPT GENERATION AGENT (SCHEMA BINDING)
-# ============================================
 
 PROMPT_GENERATION_INSTRUCTION = """You are a Schema Binding Agent for Glean, a system that extracts structured data from YouTube videos into user databases.
 
@@ -102,10 +94,6 @@ Your extraction_prompt must be complete and unambiguous. A different AI reading 
 Include classification_hints that will help identify videos matching this schema.
 """
 
-# ============================================
-# CONTENT EXTRACTION AGENT
-# ============================================
-
 EXTRACTION_INSTRUCTION = """You are a Content Extraction Agent for Glean. Your job is to extract structured data from YouTube videos according to a specific extraction prompt.
 
 ## Your Task:
@@ -153,10 +141,6 @@ When grounding tools are available, use them strategically:
 
 Output ONLY the JSON object. No explanation or markdown.
 """
-
-# ============================================
-# CRITIQUE AGENT
-# ============================================
 
 CRITIQUE_INSTRUCTION = """You are a Critique Agent for Glean. Your job is to validate extracted data against the target schema and determine if re-extraction is needed.
 

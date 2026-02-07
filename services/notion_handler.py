@@ -104,11 +104,14 @@ class NotionHandler(SchemaHandler):
                 created_count += 1
             else:
                 failed_count += 1
-                errors.append({
-                    "index": i,
-                    "error": result.get("error") or result.get("data", {}).get("message"),
-                    "row": row
-                })
+                errors.append(
+                    {
+                        "index": i,
+                        "error": result.get("error")
+                        or result.get("data", {}).get("message"),
+                        "row": row,
+                    }
+                )
 
             results.append(result)
 
@@ -117,7 +120,7 @@ class NotionHandler(SchemaHandler):
             "created_count": created_count,
             "failed_count": failed_count,
             "errors": errors,
-            "results": results
+            "results": results,
         }
 
     def update_data(
@@ -172,10 +175,6 @@ class NotionHandler(SchemaHandler):
     def _convert_to_composio_properties(
         self, data: Dict[str, Any], prop_types: Dict[str, str]
     ) -> List[Dict[str, Any]]:
-        """Convert flat key-value data to Composio's expected list format:
-        [{"name": ..., "type": ..., "value": ...}]
-        Uses the actual Notion schema types from prop_types.
-        """
         properties = []
         for key, value in data.items():
             if value is None:

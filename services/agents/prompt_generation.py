@@ -2,7 +2,9 @@ from google.adk.agents import LlmAgent
 from models.agents import ExtractionConfig
 from utils.prompt import PROMPT_GENERATION_INSTRUCTION
 
-FULL_INSTRUCTION = PROMPT_GENERATION_INSTRUCTION + """
+FULL_INSTRUCTION = (
+    PROMPT_GENERATION_INSTRUCTION
+    + """
 
 ## Example Output 1:
 For a cooking database with user preference "estimate cook time if not stated":
@@ -31,12 +33,13 @@ For a Places database with address and coordinate fields:
   ]
 }
 """
+)
 
 prompt_generation_agent = LlmAgent(
     name="PromptGenerationAgent",
-    model="gemini-3-flash-preview", 
+    model="gemini-3-flash-preview",
     instruction=FULL_INSTRUCTION,
     description="Generates frozen extraction config from schema and user answers",
     output_schema=ExtractionConfig,
-    output_key="extraction_config"
+    output_key="extraction_config",
 )

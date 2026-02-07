@@ -8,5 +8,5 @@ question_generation_agent = LlmAgent(
     instruction=QUESTION_GENERATION_INSTRUCTION,
     description="Analyzes database schema and generates clarifying questions for users",
     output_schema=QuestionGenerationOutput,
-    output_key="generated_questions"
+    output_key="generated_questions",
 )

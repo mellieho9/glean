@@ -1,12 +1,6 @@
-"""Grounding agents for enhanced data extraction."""
-
 from google.adk.agents import LlmAgent
 from google.adk.tools import google_search, AgentTool
 from google.adk.tools.google_maps_grounding_tool import GoogleMapsGroundingTool
-
-# ============================================
-# Google Maps Grounding Agent
-# ============================================
 
 _maps_agent = LlmAgent(
     name="MapsGroundingAgent",
@@ -46,10 +40,6 @@ _search_agent = LlmAgent(
     description="Searches the web for additional information",
     tools=[google_search],
 )
-
-# ============================================
-# Wrapped Agent Tools
-# ============================================
 
 MAPS_TOOL = AgentTool(agent=_maps_agent)
 SEARCH_TOOL = AgentTool(agent=_search_agent)
