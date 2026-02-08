@@ -1,34 +1,24 @@
-import Header from "../components/Header";
+import PageLayout from "../components/PageLayout";
+import Icon from "../components/Icon";
 
 export default function SetupComplete() {
   return (
-    <div className="bg-white text-slate-900 min-h-screen flex flex-col">
-      <Header />
-
-      <main className="flex-grow flex flex-col items-center justify-center px-6">
-        <div className="flex flex-col items-center max-w-md w-full text-center">
-          <div className="mb-8 w-24 h-24 rounded-full bg-green-50 flex items-center justify-center">
-            <span className="material-symbols-outlined text-green-600 text-6xl">
-              check_circle
-            </span>
-          </div>
-
-          <h1 className="text-4xl font-[Outfit] font-bold tracking-tight text-slate-900 mb-4">
-            Setup Complete
-          </h1>
-          <p className="text-slate-500 mb-10 text-lg">
-            Your configuration is ready. Start extracting schemas directly from
-            your browser.
-          </p>
-
-          <button className="px-6 py-2.5 bg-primary text-white font-medium rounded-full transition-shadow duration-200 hover:shadow-md active:shadow-sm flex items-center gap-2 cursor-pointer">
-            <span className="material-symbols-outlined text-[20px]">
-              extension
-            </span>
-            <span>Install Chrome Extension</span>
-          </button>
+    <PageLayout
+      center
+      step={3}
+      title="Setup Complete"
+      description="Your configuration is ready. Start extracting schemas directly from your browser."
+    >
+      <div className="mb-8 flex justify-center">
+        <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center">
+          <Icon name="check_circle" className="text-green-600 text-5xl" />
         </div>
-      </main>
-    </div>
+      </div>
+
+      <button className="w-full py-3 bg-primary text-white font-semibold rounded-xl transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer">
+        <Icon name="extension" className="text-[20px]" />
+        <span>Install Chrome Extension</span>
+      </button>
+    </PageLayout>
   );
 }

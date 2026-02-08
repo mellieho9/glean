@@ -14,7 +14,7 @@ export default function Header({ showAvatar = false }) {
             auto_awesome
           </span>
         </div>
-        <span className="font-[Outfit] text-xl font-semibold tracking-tight">
+        <span className=" text-xl font-semibold tracking-tight">
           glean
         </span>
       </div>

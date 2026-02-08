@@ -80,6 +80,14 @@ export const mockQuestions = [
       },
     ],
   },
+  {
+    id: "3",
+    property: "Source",
+    question: "What is the source URL or name for these recipes?",
+    type: "text",
+    value: "",
+    placeholder: "e.g., https://recipes.com or Grandma's Cookbook",
+  },
 ];
 
 export const mockLoadingSteps = [
