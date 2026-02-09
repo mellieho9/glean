@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Body, Path, Header
 
 from services.user import get_current_user
@@ -23,10 +23,12 @@ def _get_authenticated_user(access_token: str):
 
 
 def _get_schema_row(user_id: str, source_id: str) -> Dict[str, Any]:
+    db_client = get_database_client(use_service_role=True)
     result = read_rows(
         "schemas",
         filters={"user_id": user_id, "source_id": source_id},
         limit=1,
+        client=db_client,
     )
     rows = result.get("data", [])
     if not rows:
@@ -34,6 +36,37 @@ def _get_schema_row(user_id: str, source_id: str) -> Dict[str, Any]:
             status_code=404, detail="Schema not configured for this source"
         )
     return rows[0]
+
+
+@router.get("/schemas")
+async def list_configured_schemas(
+    access_token: str = Header(..., alias="Authorization"),
+) -> List[Dict[str, Any]]:
+    user = _get_authenticated_user(access_token)
+    try:
+        db_client = get_database_client(use_service_role=True)
+        result = read_rows(
+            "schemas",
+            filters={"user_id": user.id},
+            select="source_id,slug,schema",
+            client=db_client,
+        )
+        rows = result.get("data", [])
+        schemas = []
+        for row in rows:
+            schema_data = row.get("schema") or {}
+            if isinstance(schema_data, str):
+                schema_data = json.loads(schema_data)
+            schemas.append({
+                "source_id": row["source_id"],
+                "integration": row.get("slug", "notion"),
+                "name": schema_data.get("title", row["source_id"]),
+            })
+        return schemas
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list schemas: {str(e)}"
+        ) from e
 
 
 @router.post("/{integration}/onboarding/questions")
@@ -48,8 +81,13 @@ async def generate_questions(
         schema = handler.get_schema(source_id)
         tag = schema.get("title", source_id)
 
-        questions = await run_onboarding_chain(schema, tag, db_type=integration)
-        return {"source_id": source_id, "tag": tag, "questions": questions}
+        result = await run_onboarding_chain(schema, tag, db_type=integration)
+        return {
+            "source_id": source_id,
+            "tag": tag,
+            "schema_summary": result.schema_summary,
+            "questions": [q.model_dump() for q in result.questions],
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:

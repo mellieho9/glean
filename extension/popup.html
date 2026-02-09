@@ -9,8 +9,65 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <!-- Sign-in State -->
+  <div id="state-signin" class="popup hidden">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </div>
+        <span class="logo-text">GLEAN</span>
+      </div>
+    </header>
+
+    <main class="body body-center">
+      <div class="signin-icon">
+        <span class="material-symbols-outlined">account_circle</span>
+      </div>
+      <p class="processing-title">Sign in to get started</p>
+      <p class="processing-sub">Connect your account to extract data from YouTube videos.</p>
+      <button id="btn-signin" class="btn-glean btn-signin">
+        <span class="material-symbols-outlined">login</span>
+        <span>Sign in via Web App</span>
+      </button>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span class="dot dot-gray"></span>
+        <span class="status-text">Not signed in</span>
+      </div>
+      <span class="version">v1.1.0</span>
+    </footer>
+  </div>
+
+  <!-- Loading State -->
+  <div id="state-loading" class="popup">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </div>
+        <span class="logo-text">GLEAN</span>
+      </div>
+    </header>
+
+    <main class="body body-center">
+      <div class="spinner-ring"></div>
+      <p class="processing-sub">Loading…</p>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span class="dot dot-gray"></span>
+        <span class="status-text">Initializing</span>
+      </div>
+      <span class="version">v1.1.0</span>
+    </footer>
+  </div>
+
   <!-- Default State -->
-  <div id="state-default" class="popup">
+  <div id="state-default" class="popup hidden">
     <header class="header">
       <div class="logo">
         <div class="logo-icon">
@@ -27,7 +84,7 @@
       <label class="field-label" for="schema-select">ADD THIS TO</label>
       <div class="select-wrapper">
         <select id="schema-select">
-          <option value="" disabled>Select a schema…</option>
+          <option value="" disabled selected>Loading schemas…</option>
         </select>
         <span class="material-symbols-outlined select-chevron outlined">expand_more</span>
       </div>
@@ -43,7 +100,7 @@
         <span id="status-dot" class="dot dot-gray"></span>
         <span id="status-text" class="status-text">Checking page…</span>
       </div>
-      <span class="version">v1.0.4</span>
+      <span class="version">v1.1.0</span>
     </footer>
   </div>
 
@@ -61,7 +118,7 @@
     <main class="body body-center">
       <div class="spinner-ring"></div>
       <p class="processing-title">Extracting data…</p>
-      <p class="processing-sub">Analyzing video content</p>
+      <p id="processing-sub" class="processing-sub">Analyzing video content</p>
     </main>
 
     <footer class="footer">
@@ -69,7 +126,7 @@
         <span class="dot dot-yellow pulse"></span>
         <span class="status-text">Processing</span>
       </div>
-      <span class="version">v1.0.4</span>
+      <span class="version">v1.1.0</span>
     </footer>
   </div>
 
@@ -90,6 +147,10 @@
       </div>
       <p class="processing-title">Added successfully</p>
       <p id="success-detail" class="processing-sub">Data saved to Recipes</p>
+      <button id="btn-done" class="btn-glean btn-retry">
+        <span class="material-symbols-outlined">bolt</span>
+        <span>Glean another</span>
+      </button>
     </main>
 
     <footer class="footer">
@@ -97,7 +158,7 @@
         <span class="dot dot-green"></span>
         <span class="status-text">Complete</span>
       </div>
-      <span class="version">v1.0.4</span>
+      <span class="version">v1.1.0</span>
     </footer>
   </div>
 
@@ -129,7 +190,7 @@
         <span class="dot dot-red"></span>
         <span class="status-text">Error</span>
       </div>
-      <span class="version">v1.0.4</span>
+      <span class="version">v1.1.0</span>
     </footer>
   </div>
 

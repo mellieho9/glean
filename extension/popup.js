@@ -1,6 +1,8 @@
-const API_BASE = "http://localhost:8000";
+const WEB_APP = "http://localhost:5173";
 
 // ── DOM refs ──
+const stateSignin = document.getElementById("state-signin");
+const stateLoading = document.getElementById("state-loading");
 const stateDefault = document.getElementById("state-default");
 const stateProcessing = document.getElementById("state-processing");
 const stateSuccess = document.getElementById("state-success");
@@ -9,21 +11,63 @@ const stateError = document.getElementById("state-error");
 const schemaSelect = document.getElementById("schema-select");
 const btnGlean = document.getElementById("btn-glean");
 const btnRetry = document.getElementById("btn-retry");
+const btnDone = document.getElementById("btn-done");
 const btnSettings = document.getElementById("btn-settings");
+const btnSignin = document.getElementById("btn-signin");
 const statusDot = document.getElementById("status-dot");
 const statusText = document.getElementById("status-text");
+const processingSub = document.getElementById("processing-sub");
 const successDetail = document.getElementById("success-detail");
 const errorDetail = document.getElementById("error-detail");
 
 let currentTabUrl = null;
 let isYouTube = false;
+let accessToken = null;
+
+// ── State management ──
+
+const ALL_STATES = [stateSignin, stateLoading, stateDefault, stateProcessing, stateSuccess, stateError];
 
 function showState(stateEl) {
-  [stateDefault, stateProcessing, stateSuccess, stateError].forEach((el) =>
-    el.classList.add("hidden")
-  );
+  ALL_STATES.forEach((el) => el.classList.add("hidden"));
   stateEl.classList.remove("hidden");
 }
+
+// ── API helpers ──
+
+function apiFetch(path, options = {}) {
+  const { headers: extraHeaders, ...rest } = options;
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      {
+        type: "API_FETCH",
+        path,
+        options: {
+          ...rest,
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: accessToken } : {}),
+            ...extraHeaders,
+          },
+        },
+      },
+      (response) => {
+        if (!response || response.error) {
+          if (response?.status === 401) {
+            chrome.storage.local.remove(["accessToken", "refreshToken"]);
+            accessToken = null;
+            showState(stateSignin);
+          }
+          reject(new Error(response?.error || "Request failed"));
+          return;
+        }
+        resolve(response.data);
+      }
+    );
+  });
+}
+
+// ── Tab detection ──
 
 async function detectCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -38,52 +82,63 @@ async function detectCurrentTab() {
   if (isYouTube) {
     statusDot.className = "dot dot-green";
     statusText.textContent = "YouTube video detected";
-    updateGleanButton();
   } else {
     statusDot.className = "dot dot-gray";
     statusText.textContent = "Not a YouTube video";
-    btnGlean.disabled = true;
   }
+  updateGleanButton();
 }
 
+// ── Schema loading ──
+
 async function loadSchemas() {
-  const { schemas } = await chrome.storage.local.get("schemas");
-
-  const schemaList = schemas || [
-    { source_id: "recipes", name: "Recipes", integration: "notion" },
-    { source_id: "commentary", name: "Interesting Commentary", integration: "notion" },
-    { source_id: "places", name: "Places", integration: "notion" },
-  ];
-
   schemaSelect.innerHTML = "";
 
-  if (schemaList.length === 0) {
+  try {
+    const schemas = await apiFetch("/agent/schemas");
+
+    if (!schemas || schemas.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.disabled = true;
+      opt.selected = true;
+      opt.textContent = "No schemas configured";
+      schemaSelect.appendChild(opt);
+      updateGleanButton();
+      return;
+    }
+
+    schemas.forEach((schema, i) => {
+      const opt = document.createElement("option");
+      opt.value = JSON.stringify({
+        source_id: schema.source_id,
+        integration: schema.integration,
+      });
+      opt.textContent = schema.name;
+      if (i === 0) opt.selected = true;
+      schemaSelect.appendChild(opt);
+    });
+
+    updateGleanButton();
+  } catch (err) {
+    // If auth error, showState already handled above
+    if (!accessToken) return;
+
     const opt = document.createElement("option");
     opt.value = "";
     opt.disabled = true;
     opt.selected = true;
-    opt.textContent = "No schemas configured";
+    opt.textContent = "Failed to load schemas";
     schemaSelect.appendChild(opt);
-    return;
+    updateGleanButton();
   }
-
-  schemaList.forEach((schema, i) => {
-    const opt = document.createElement("option");
-    opt.value = JSON.stringify({
-      source_id: schema.source_id,
-      integration: schema.integration,
-    });
-    opt.textContent = schema.name;
-    if (i === 0) opt.selected = true;
-    schemaSelect.appendChild(opt);
-  });
-
-  updateGleanButton();
 }
 
 function updateGleanButton() {
   btnGlean.disabled = !isYouTube || !schemaSelect.value;
 }
+
+// ── Video processing ──
 
 async function processVideo() {
   if (!schemaSelect.value) {
@@ -97,31 +152,16 @@ async function processVideo() {
     schemaSelect.options[schemaSelect.selectedIndex].textContent;
 
   showState(stateProcessing);
+  processingSub.textContent = `Extracting to ${selectedName}…`;
 
   try {
-    const { accessToken } = await chrome.storage.local.get("accessToken");
-
-    const res = await fetch(
-      `${API_BASE}/agent/${selected.integration}/process`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: accessToken || "",
-        },
-        body: JSON.stringify({
-          youtube_url: currentTabUrl,
-          source_id: selected.source_id,
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Request failed (${res.status})`);
-    }
-
-    const data = await res.json();
+    const data = await apiFetch(`/agent/${selected.integration}/process`, {
+      method: "POST",
+      body: JSON.stringify({
+        youtube_url: currentTabUrl,
+        source_id: selected.source_id,
+      }),
+    });
 
     if (data.success) {
       successDetail.textContent = `Data saved to ${selectedName}`;
@@ -135,15 +175,56 @@ async function processVideo() {
   }
 }
 
-schemaSelect.addEventListener("change", updateGleanButton);
-Promise.all([detectCurrentTab(), loadSchemas()]).catch((err) => {
-  console.error("Initialization failed:", err);
-  errorDetail.textContent = "Failed to initialize. Please reload.";
-  showState(stateError);
-});
-btnSettings.addEventListener("click", () => {
-  chrome.tabs.create({ url: `${API_BASE.replace("localhost:8000", "localhost:5173")}` });
+// ── Initialization ──
+
+async function init() {
+  showState(stateLoading);
+
+  // Get stored auth token
+  const stored = await chrome.storage.local.get(["accessToken"]);
+  accessToken = stored.accessToken || null;
+
+  if (!accessToken) {
+    showState(stateSignin);
+    return;
+  }
+
+  // Validate token by fetching schemas
+  try {
+    await detectCurrentTab();
+    await loadSchemas();
+    showState(stateDefault);
+  } catch (err) {
+    // If token is invalid, sign-in state is already shown by apiFetch
+    if (!accessToken) return;
+    errorDetail.textContent = err.message || "Failed to initialize";
+    showState(stateError);
+  }
+}
+
+// ── Event listeners ──
+
+btnSignin.addEventListener("click", () => {
+  chrome.tabs.create({ url: WEB_APP });
 });
 
-detectCurrentTab();
-loadSchemas();
+btnSettings.addEventListener("click", () => {
+  chrome.tabs.create({ url: WEB_APP });
+});
+
+btnGlean.addEventListener("click", processVideo);
+
+btnRetry.addEventListener("click", () => {
+  showState(stateDefault);
+  detectCurrentTab();
+});
+
+btnDone.addEventListener("click", () => {
+  showState(stateDefault);
+  detectCurrentTab();
+});
+
+schemaSelect.addEventListener("change", updateGleanButton);
+
+// Start
+init();

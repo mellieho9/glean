@@ -155,6 +155,13 @@ body {
   position: absolute;
   right: 12px;
   top: 50%;
+  transform: translateY(-50%);
+  color: #71717a;
+  pointer-events: none;
+  font-size: 20px;
+}
+
+/* ── Glean Button ── */
 .btn-glean {
   width: 100%;
   display: flex;
@@ -194,18 +201,18 @@ body {
 .btn-glean .material-symbols-outlined {
   font-size: 20px;
 }
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-glean .material-symbols-outlined {
-  font-size: 20px;
-}
 
 .btn-retry {
   margin-top: 16px;
   width: auto;
   padding: 10px 24px;
+  font-size: 13px;
+}
+
+.btn-signin {
+  margin-top: 16px;
+  width: auto;
+  padding: 12px 24px;
   font-size: 13px;
 }
 
@@ -285,6 +292,14 @@ body {
 .processing-sub {
   font-size: 12px;
   color: #71717a;
+}
+
+/* ── Sign-in ── */
+.signin-icon .material-symbols-outlined {
+  font-size: 44px;
+  color: #6366f1;
+  margin-bottom: 12px;
+  display: block;
 }
 
 /* ── Success ── */

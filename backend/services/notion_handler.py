@@ -180,8 +180,15 @@ class NotionHandler(SchemaHandler):
             if value is None:
                 continue
             notion_type = prop_types.get(key, "rich_text")
+            value = self._coerce_value(value, notion_type)
             properties.append({"name": key, "type": notion_type, "value": value})
         return properties
+
+    def _coerce_value(self, value: Any, notion_type: str) -> str:
+        """Coerce extracted values to strings — Composio expects all values as strings."""
+        if isinstance(value, list):
+            return ", ".join(str(v) for v in value)
+        return str(value)
 
     def _convert_to_notion_properties(self, data: Dict[str, Any]) -> Dict[str, Any]:
         properties = {}

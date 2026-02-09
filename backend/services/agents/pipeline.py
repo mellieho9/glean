@@ -198,15 +198,23 @@ async def process_video(
     )
 
     try:
+        extraction_text = None
         async for event in runner.run_async(
             session_id=session.id,
             user_id="user",
             new_message=content,
         ):
-            if event.is_final_response():
-                pass
+            # Capture extraction agent text as fallback when output_key misses it
+            if (
+                getattr(event, "author", None) == "ContentExtractionAgent"
+                and event.content
+                and event.content.parts
+            ):
+                for part in event.content.parts:
+                    if hasattr(part, "text") and part.text:
+                        extraction_text = part.text
 
-        raw_content = session.state.get("extracted_content")
+        raw_content = session.state.get("extracted_content") or extraction_text
         critique_result = session.state.get("critique_result")
 
         if raw_content is None:
@@ -218,13 +226,11 @@ async def process_video(
 
         try:
             extracted_data = _parse_extracted_data(raw_content)
-        except (json.JSONDecodeError, TypeError):
-            extracted_data = {"raw_output": raw_content, "parse_error": True}
-        critique_result = session.state.get("critique_result")
-
-        try:
-            extracted_data = _parse_extracted_data(raw_content)
-        except (json.JSONDecodeError, TypeError):
+            print(extracted_data)
+            # Unwrap if model returned a single-item array
+            if isinstance(extracted_data, list):
+                extracted_data = extracted_data[0] if extracted_data else {}
+        except (json.JSONDecodeError, TypeError, IndexError):
             extracted_data = {"raw_output": raw_content, "parse_error": True}
 
         critique_valid = False
@@ -233,10 +239,11 @@ async def process_video(
         elif hasattr(critique_result, "valid"):
             critique_valid = critique_result.valid
 
-        # Write to database if critique passed
+        # Write to database if critique passed (or if no critique ran but we have data)
         wrote_successfully = False
         write_error = None
-        if critique_valid and extracted_data and not extracted_data.get("parse_error"):
+        has_valid_data = extracted_data and not extracted_data.get("parse_error")
+        if has_valid_data and (critique_valid or critique_result is None):
             mapped_data = (
                 _apply_field_mappings(extracted_data, field_mappings)
                 if field_mappings
