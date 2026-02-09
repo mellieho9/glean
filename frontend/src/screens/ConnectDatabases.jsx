@@ -56,7 +56,6 @@ export default function ConnectDatabases() {
   return (
     <PageLayout
       center
-      showAvatar
       step={0}
       title="Connect your databases"
       description="Link your data sources to get started."

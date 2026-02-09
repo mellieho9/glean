@@ -225,7 +225,7 @@ export default function Dashboard() {
 
   if (authLoading || loading) {
     return (
-      <PageLayout showAvatar>
+      <PageLayout>
         <div className="flex justify-center py-20">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-primary rounded-full spinner" />
         </div>
@@ -245,7 +245,7 @@ export default function Dashboard() {
   const recentJobs = jobs.slice(0, 10);
 
   return (
-    <PageLayout showAvatar>
+    <PageLayout>
       <div className="max-w mx-auto px-6 pb-24">
         {/* Connected Databases */}
         <section className="mb-12">

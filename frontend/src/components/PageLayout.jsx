@@ -1,10 +1,10 @@
 import Header from "./Header";
 import ProgressSteps from "./ProgressSteps";
 
-export default function PageLayout({ children, showAvatar, center, step, title, description }) {
+export default function PageLayout({ children, center, step, title, description }) {
   return (
     <div className="bg-white text-slate-900 min-h-screen flex flex-col">
-      <Header showAvatar={showAvatar} />
+      <Header/>
       <main
         className={
           center
