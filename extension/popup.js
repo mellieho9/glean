@@ -32,7 +32,7 @@ async function detectCurrentTab() {
   currentTabUrl = tab.url;
   isYouTube =
     currentTabUrl.includes("youtube.com/watch") ||
-    currentTabUrl.inclludes("youtube.com/shorts") ||
+    currentTabUrl.includes("youtube.com/shorts") ||
     currentTabUrl.includes("youtu.be/");
 
   if (isYouTube) {
@@ -86,6 +86,12 @@ function updateGleanButton() {
 }
 
 async function processVideo() {
+  if (!schemaSelect.value) {
+    errorDetail.textContent = "Please select a schema";
+    showState(stateError);
+    return;
+  }
+
   const selected = JSON.parse(schemaSelect.value);
   const selectedName =
     schemaSelect.options[schemaSelect.selectedIndex].textContent;
@@ -130,8 +136,11 @@ async function processVideo() {
 }
 
 schemaSelect.addEventListener("change", updateGleanButton);
-btnGlean.addEventListener("click", processVideo);
-btnRetry.addEventListener("click", () => showState(stateDefault));
+Promise.all([detectCurrentTab(), loadSchemas()]).catch((err) => {
+  console.error("Initialization failed:", err);
+  errorDetail.textContent = "Failed to initialize. Please reload.";
+  showState(stateError);
+});
 btnSettings.addEventListener("click", () => {
   chrome.tabs.create({ url: `${API_BASE.replace("localhost:8000", "localhost:5173")}` });
 });

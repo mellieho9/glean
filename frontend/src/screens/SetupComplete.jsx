@@ -15,10 +15,15 @@ export default function SetupComplete() {
         </div>
       </div>
 
-      <button className="w-full py-3 bg-primary text-white font-semibold rounded-xl transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer">
-        <Icon name="extension" className="text-[20px]" />
+      <a
+        href="https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full py-3 bg-primary text-white font-semibold rounded-xl transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <Icon name="extension" aria-hidden="true" className="text-[20px]" />
         <span>Install Chrome Extension</span>
-      </button>
+      </a>
     </PageLayout>
   );
 }

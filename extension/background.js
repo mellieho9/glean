@@ -9,8 +9,14 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
   }
 
   if (message.type === "SET_SCHEMAS") {
-    chrome.storage.local.set({ schemas: message.schemas });
-    sendResponse({ success: true });
+    chrome.storage.local.set({ schemas: message.schemas }, () => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ success: true });
+      }
+    });
+    return true; // async response
   }
 });
 

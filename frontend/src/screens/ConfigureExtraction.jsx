@@ -18,10 +18,10 @@ export default function ConfigureExtraction() {
         q.id === questionId
           ? {
               ...q,
-              options: q.options.map((o) => ({
+              options: q.options?.map((o) => ({
                 ...o,
                 selected: o.value === optionValue,
-              })),
+              })) ?? [],
             }
           : q
       )

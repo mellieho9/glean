@@ -83,6 +83,13 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.icon-btn:focus-visible {
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.05);
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 .icon-btn .material-symbols-outlined {
   font-size: 20px;
 }
@@ -148,13 +155,6 @@ body {
   position: absolute;
   right: 12px;
   top: 50%;
-  transform: translateY(-50%);
-  font-size: 20px;
-  color: #71717a;
-  pointer-events: none;
-}
-
-/* ── Glean Button ── */
 .btn-glean {
   width: 100%;
   display: flex;
@@ -181,7 +181,19 @@ body {
   transform: scale(0.98);
 }
 
+.btn-glean:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 .btn-glean:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-glean .material-symbols-outlined {
+  font-size: 20px;
+}
   opacity: 0.4;
   cursor: not-allowed;
 }

@@ -3,7 +3,7 @@ import Icon from "./Icon";
 export default function CardOptions({ question, onSelect }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {question.options.map((opt) => (
+      {question.options?.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onSelect(opt.value)}

@@ -1,5 +1,7 @@
 export default function ProgressBar({ step, totalSteps, label }) {
-  const percent = Math.round((step / totalSteps) * 100);
+  const percent = totalSteps > 0
+    ? Math.round(Math.min(Math.max(step, 0), totalSteps) / totalSteps * 100)
+    : 0;
 
   return (
     <div className="mb-12">
