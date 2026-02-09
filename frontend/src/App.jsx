@@ -8,6 +8,7 @@ import SelectSchemas from "./screens/SelectSchemas";
 import ConfigureExtraction from "./screens/ConfigureExtraction";
 import GeneratingPrompts from "./screens/GeneratingPrompts";
 import SetupComplete from "./screens/SetupComplete";
+import Dashboard from "./screens/Dashboard";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/configure" element={<ConfigureExtraction />} />
           <Route path="/generating" element={<GeneratingPrompts />} />
           <Route path="/complete" element={<SetupComplete />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </OnboardingProvider>
     </AuthProvider>

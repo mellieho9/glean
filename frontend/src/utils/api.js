@@ -93,6 +93,25 @@ export function configureSchema(
   });
 }
 
+export function listConfiguredSchemas(accessToken) {
+  return request("/schema/configured", {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function listJobs(accessToken, status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return request(`/agent/jobs${query}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function getJob(jobId, accessToken) {
+  return request(`/agent/jobs/${encodeURIComponent(jobId)}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
 export function processVideo(integration, youtubeUrl, sourceId, accessToken) {
   return request(`/agent/${integration}/process`, {
     method: "POST",

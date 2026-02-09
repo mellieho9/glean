@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-export default function Header({ showAvatar = false }) {
+export default function Header() {
   const navigate = useNavigate();
 
   return (
@@ -20,13 +20,6 @@ export default function Header({ showAvatar = false }) {
           glean
         </span>
       </button>
-      <div className="flex items-center space-x-4">
-        {showAvatar && (
-          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-sm font-medium text-slate-600">
-            M
-          </div>
-        )}
-      </div>
     </header>
   );
 }
