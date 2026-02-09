@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!-- Default State -->
+  <div id="state-default" class="popup">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </div>
+        <span class="logo-text">GLEAN</span>
+      </div>
+      <button id="btn-settings" class="icon-btn">
+        <span class="material-symbols-outlined outlined">settings</span>
+      </button>
+    </header>
+
+    <main class="body">
+      <label class="field-label">ADD THIS TO</label>
+      <div class="select-wrapper">
+        <select id="schema-select">
+          <option value="" disabled>Select a schema…</option>
+        </select>
+        <span class="material-symbols-outlined select-chevron outlined">expand_more</span>
+      </div>
+
+      <button id="btn-glean" class="btn-glean" disabled>
+        <span class="material-symbols-outlined">bolt</span>
+        <span>Glean</span>
+      </button>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span id="status-dot" class="dot dot-gray"></span>
+        <span id="status-text" class="status-text">Checking page…</span>
+      </div>
+      <span class="version">v1.0.4</span>
+    </footer>
+  </div>
+
+  <!-- Processing State -->
+  <div id="state-processing" class="popup hidden">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </div>
+        <span class="logo-text">GLEAN</span>
+      </div>
+    </header>
+
+    <main class="body body-center">
+      <div class="spinner-ring"></div>
+      <p class="processing-title">Extracting data…</p>
+      <p class="processing-sub">Analyzing video content</p>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span class="dot dot-yellow pulse"></span>
+        <span class="status-text">Processing</span>
+      </div>
+      <span class="version">v1.0.4</span>
+    </footer>
+  </div>
+
+  <!-- Success State -->
+  <div id="state-success" class="popup hidden">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </div>
+        <span class="logo-text">GLEAN</span>
+      </div>
+    </header>
+
+    <main class="body body-center">
+      <div class="success-icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <p class="processing-title">Added successfully</p>
+      <p id="success-detail" class="processing-sub">Data saved to Recipes</p>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span class="dot dot-green"></span>
+        <span class="status-text">Complete</span>
+      </div>
+      <span class="version">v1.0.4</span>
+    </footer>
+  </div>
+
+  <!-- Error State -->
+  <div id="state-error" class="popup hidden">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </div>
+        <span class="logo-text">GLEAN</span>
+      </div>
+    </header>
+
+    <main class="body body-center">
+      <div class="error-icon">
+        <span class="material-symbols-outlined">error</span>
+      </div>
+      <p class="processing-title">Something went wrong</p>
+      <p id="error-detail" class="processing-sub">Please try again</p>
+      <button id="btn-retry" class="btn-glean btn-retry">
+        <span class="material-symbols-outlined">refresh</span>
+        <span>Retry</span>
+      </button>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span class="dot dot-red"></span>
+        <span class="status-text">Error</span>
+      </div>
+      <span class="version">v1.0.4</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
