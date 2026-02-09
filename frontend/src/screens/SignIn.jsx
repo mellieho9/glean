@@ -11,9 +11,9 @@ export default function SignIn() {
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState(null);
 
-  // If already logged in, redirect to connect
+  // If already logged in, redirect to dashboard
   if (!loading && user) {
-    navigate("/connect", { replace: true });
+    navigate("/dashboard", { replace: true });
     return null;
   }
 

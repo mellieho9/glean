@@ -19,7 +19,7 @@ export default function AuthCallback() {
     exchangeCodeForSession(code)
       .then((session) => {
         login(session);
-        navigate("/connect", { replace: true });
+        navigate("/dashboard", { replace: true });
       })
       .catch((err) => setError(err.message));
   }, [code, login, navigate]);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOnboarding } from "../context/OnboardingContext";
-import { listSources } from "../utils/api";
+import { listSources, listConfiguredSchemas } from "../utils/api";
 import PageLayout from "../components/PageLayout";
 import NavFooter from "../components/NavFooter";
 import SchemaCard from "../components/SchemaCard";
@@ -18,14 +18,28 @@ export default function SelectSchemas() {
     if (!accessToken) return;
 
     let cancelled = false;
-    listSources(integration, accessToken)
-      .then((data) => {
+    Promise.all([
+      listSources(integration, accessToken),
+      listConfiguredSchemas(accessToken).catch(() => []),
+    ])
+      .then(([data, configured]) => {
         if (cancelled) return;
         const list = Array.isArray(data) ? data : [];
         setSources(list);
-        if (list.length > 0) {
-          setSelected({ [list[0].id || list[0].source_id]: true });
+
+        const configuredIds = new Set(
+          (Array.isArray(configured) ? configured : []).map((s) => s.source_id)
+        );
+        const initial = {};
+        for (const s of list) {
+          const id = s.id || s.source_id;
+          if (configuredIds.has(id)) initial[id] = true;
         }
+        // If nothing was configured, default to the first source
+        if (Object.keys(initial).length === 0 && list.length > 0) {
+          initial[list[0].id || list[0].source_id] = true;
+        }
+        setSelected(initial);
       })
       .catch((err) => { if (!cancelled) setError(err.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
