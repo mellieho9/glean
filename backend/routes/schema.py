@@ -42,7 +42,7 @@ async def get_schema(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to get schema: {str(e)}"
+            status_code=500, detail="Failed to get schema"
         ) from e
 
 
@@ -64,7 +64,7 @@ async def read_data(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to read data: {str(e)}"
+            status_code=500, detail=f"Failed to read data"
         ) from e
 
 
@@ -85,7 +85,7 @@ async def write_data(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to write data: {str(e)}"
+            status_code=500, detail="Failed to write data"
         ) from e
 
 
@@ -107,5 +107,5 @@ async def update_data(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to update data: {str(e)}"
+            status_code=500, detail=f"Failed to update data"
         ) from e
