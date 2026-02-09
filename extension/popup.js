@@ -18,7 +18,6 @@ const errorDetail = document.getElementById("error-detail");
 let currentTabUrl = null;
 let isYouTube = false;
 
-// ── State management ──
 function showState(stateEl) {
   [stateDefault, stateProcessing, stateSuccess, stateError].forEach((el) =>
     el.classList.add("hidden")
@@ -26,7 +25,6 @@ function showState(stateEl) {
   stateEl.classList.remove("hidden");
 }
 
-// ── Detect current tab ──
 async function detectCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url) return;
@@ -34,6 +32,7 @@ async function detectCurrentTab() {
   currentTabUrl = tab.url;
   isYouTube =
     currentTabUrl.includes("youtube.com/watch") ||
+    currentTabUrl.inclludes("youtube.com/shorts") ||
     currentTabUrl.includes("youtu.be/");
 
   if (isYouTube) {
@@ -47,11 +46,9 @@ async function detectCurrentTab() {
   }
 }
 
-// ── Load configured schemas from storage ──
 async function loadSchemas() {
   const { schemas } = await chrome.storage.local.get("schemas");
 
-  // Use stored schemas or fall back to defaults for demo
   const schemaList = schemas || [
     { source_id: "recipes", name: "Recipes", integration: "notion" },
     { source_id: "commentary", name: "Interesting Commentary", integration: "notion" },
@@ -88,7 +85,6 @@ function updateGleanButton() {
   btnGlean.disabled = !isYouTube || !schemaSelect.value;
 }
 
-// ── Process video ──
 async function processVideo() {
   const selected = JSON.parse(schemaSelect.value);
   const selectedName =
@@ -133,7 +129,6 @@ async function processVideo() {
   }
 }
 
-// ── Event listeners ──
 schemaSelect.addEventListener("change", updateGleanButton);
 btnGlean.addEventListener("click", processVideo);
 btnRetry.addEventListener("click", () => showState(stateDefault));
@@ -141,6 +136,5 @@ btnSettings.addEventListener("click", () => {
   chrome.tabs.create({ url: `${API_BASE.replace("localhost:8000", "localhost:5173")}` });
 });
 
-// ── Init ──
 detectCurrentTab();
 loadSchemas();
