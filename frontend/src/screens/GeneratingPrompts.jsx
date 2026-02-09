@@ -90,8 +90,9 @@ export default function GeneratingPrompts() {
     }
   }, [progress, error, navigate]);
 
-  const activeName =
-    selectedSources[0]?.title || selectedSources[0]?.name || "database";
+  const sourceNames = selectedSources.map(
+    (s) => s.title || s.name || "database"
+  );
 
   return (
     <PageLayout
@@ -99,13 +100,27 @@ export default function GeneratingPrompts() {
       step={3}
       title="Generating AI Prompts"
       description={
-        <>
-          Crafting a custom extraction schema for your{" "}
-          <span className="text-slate-900 font-medium italic">
-            {activeName}
-          </span>{" "}
-          database…
-        </>
+        sourceNames.length === 1 ? (
+          <>
+            Crafting a custom extraction schema for your{" "}
+            <span className="text-slate-900 font-medium italic">
+              {sourceNames[0]}
+            </span>{" "}
+            database…
+          </>
+        ) : (
+          <>
+            Crafting custom extraction schemas for{" "}
+            <span className="text-slate-900 font-medium italic">
+              {sourceNames.slice(0, -1).join(", ")}
+            </span>
+            {" and "}
+            <span className="text-slate-900 font-medium italic">
+              {sourceNames[sourceNames.length - 1]}
+            </span>
+            …
+          </>
+        )
       }
     >
       {/* Progress Bar */}

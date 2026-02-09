@@ -5,9 +5,10 @@ function authHeaders(token) {
 }
 
 async function request(path, options = {}) {
+  const { headers: optHeaders, ...rest } = options;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
+    ...rest,
+    headers: { "Content-Type": "application/json", ...optHeaders },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
