@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import { useOnboarding } from "../context/OnboardingContext";
 import { configureSchema } from "../utils/api";
 import PageLayout from "../components/PageLayout";
-import Icon from "../components/Icon";
 
 export default function GeneratingPrompts() {
   const navigate = useNavigate();
@@ -17,7 +16,7 @@ export default function GeneratingPrompts() {
   const [error, setError] = useState(null);
   const started = useRef(false);
 
-  // Run configuration for each selected source
+
   useEffect(() => {
     if (started.current || !accessToken || selectedSources.length === 0) return;
     started.current = true;
@@ -137,32 +136,6 @@ export default function GeneratingPrompts() {
         <div className="flex items-center space-x-2 text-xs font-medium uppercase tracking-widest text-slate-400">
           <span>{error ? "Error" : statusText}</span>
         </div>
-
-        {/* Step checklist */}
-        {steps.length > 0 && (
-          <div className="grid grid-cols-1 gap-2 w-full max-w-xs mx-auto">
-            {steps.map((step, i) => (
-              <div
-                key={i}
-                className={`flex items-center space-x-3 p-3 rounded-xl border transition-all ${
-                  step.done
-                    ? "bg-white border-slate-100 shadow-sm"
-                    : "bg-slate-50/50 border-dashed border-slate-200"
-                }`}
-              >
-                {step.done ? (
-                  <Icon
-                    name="check_circle"
-                    className="text-emerald-500 text-lg"
-                  />
-                ) : (
-                  <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent spinner" />
-                )}
-                <span className="text-xs text-slate-600">{step.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
 
         {error && (
           <div className="mt-4 text-center">

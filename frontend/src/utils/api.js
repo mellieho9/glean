@@ -17,8 +17,6 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-// ── Auth ──
-
 export function initiateOAuth(provider, redirectTo) {
   return request("/auth/oauth", {
     method: "POST",
@@ -48,8 +46,6 @@ export function signOut(accessToken) {
   });
 }
 
-// ── Integrations / Connections ──
-
 export function connectIntegration(integration, accessToken) {
   return request(`/auth/connect/${integration}`, {
     method: "POST",
@@ -63,8 +59,6 @@ export function listConnections(accessToken) {
   });
 }
 
-// ── Schema / Sources ──
-
 export function listSources(integration, accessToken) {
   return request(`/schema/${integration}/sources`, {
     headers: authHeaders(accessToken),
@@ -77,8 +71,6 @@ export function getSchema(integration, sourceId, accessToken) {
     { headers: authHeaders(accessToken) }
   );
 }
-
-// ── Agent / Onboarding ──
 
 export function generateQuestions(integration, sourceId, accessToken) {
   return request(`/agent/${integration}/onboarding/questions`, {

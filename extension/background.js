@@ -1,6 +1,5 @@
 const API_BASE = "http://localhost:8000";
 
-// Listen for internal messages from popup and content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "SYNC_AUTH") {
     chrome.storage.local.set({
@@ -14,7 +13,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.get(["accessToken", "refreshToken"], (data) => {
       sendResponse(data);
     });
-    return true; // async response
+    return true;
   }
 
   if (message.type === "SIGN_OUT") {
@@ -39,11 +38,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((err) => {
         sendResponse({ error: err.message });
       });
-    return true; // async response
+    return true;
   }
 });
 
-// Listen for auth tokens passed from the web app via external messages
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
   if (message.type === "SET_AUTH") {
     chrome.storage.local.set({
@@ -61,6 +59,6 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         sendResponse({ success: true });
       }
     });
-    return true; // async response
+    return true;
   }
 });

@@ -1,6 +1,5 @@
 const WEB_APP = "http://localhost:5173";
 
-// ── DOM refs ──
 const stateSignin = document.getElementById("state-signin");
 const stateLoading = document.getElementById("state-loading");
 const stateDefault = document.getElementById("state-default");
@@ -17,14 +16,17 @@ const btnSignin = document.getElementById("btn-signin");
 const statusDot = document.getElementById("status-dot");
 const statusText = document.getElementById("status-text");
 const processingSub = document.getElementById("processing-sub");
+const progressFill = document.getElementById("progress-fill");
 const successDetail = document.getElementById("success-detail");
 const errorDetail = document.getElementById("error-detail");
+const jobBadge = document.getElementById("job-badge");
+const jobCount = document.getElementById("job-count");
 
 let currentTabUrl = null;
 let isYouTube = false;
 let accessToken = null;
-
-// ── State management ──
+let activeJobs = [];
+let pollTimer = null;
 
 const ALL_STATES = [stateSignin, stateLoading, stateDefault, stateProcessing, stateSuccess, stateError];
 
@@ -32,8 +34,6 @@ function showState(stateEl) {
   ALL_STATES.forEach((el) => el.classList.add("hidden"));
   stateEl.classList.remove("hidden");
 }
-
-// ── API helpers ──
 
 function apiFetch(path, options = {}) {
   const { headers: extraHeaders, ...rest } = options;
@@ -67,8 +67,6 @@ function apiFetch(path, options = {}) {
   });
 }
 
-// ── Tab detection ──
-
 async function detectCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url) return;
@@ -89,13 +87,11 @@ async function detectCurrentTab() {
   updateGleanButton();
 }
 
-// ── Schema loading ──
-
 async function loadSchemas() {
   schemaSelect.innerHTML = "";
 
   try {
-    const schemas = await apiFetch("/agent/schemas");
+    const schemas = await apiFetch("/schema/configured");
 
     if (!schemas || schemas.length === 0) {
       const opt = document.createElement("option");
@@ -121,7 +117,6 @@ async function loadSchemas() {
 
     updateGleanButton();
   } catch (err) {
-    // If auth error, showState already handled above
     if (!accessToken) return;
 
     const opt = document.createElement("option");
@@ -138,7 +133,67 @@ function updateGleanButton() {
   btnGlean.disabled = !isYouTube || !schemaSelect.value;
 }
 
-// ── Video processing ──
+// ── Job tracking ──
+
+function updateJobBadge() {
+  if (activeJobs.length > 0) {
+    jobBadge.classList.remove("hidden");
+    jobCount.textContent = activeJobs.length;
+  } else {
+    jobBadge.classList.add("hidden");
+  }
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(pollJobs, 3000);
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+async function pollJobs() {
+  if (activeJobs.length === 0) {
+    stopPolling();
+    return;
+  }
+
+  const stillActive = [];
+  for (const job of activeJobs) {
+    try {
+      const data = await apiFetch(`/agent/jobs/${job.id}`);
+      if (data.status === "completed") {
+        // If we're on the default state, briefly show success
+        if (!stateDefault.classList.contains("hidden")) {
+          statusDot.className = "dot dot-green";
+          statusText.textContent = `Saved to ${job.name}`;
+          setTimeout(() => detectCurrentTab(), 3000);
+        }
+      } else if (data.status === "failed") {
+        if (!stateDefault.classList.contains("hidden")) {
+          statusDot.className = "dot dot-red";
+          statusText.textContent = `Failed: ${data.error || "Unknown error"}`;
+          setTimeout(() => detectCurrentTab(), 4000);
+        }
+      } else {
+        stillActive.push(job);
+      }
+    } catch {
+      // Network error — keep polling
+      stillActive.push(job);
+    }
+  }
+
+  activeJobs = stillActive;
+  updateJobBadge();
+  if (activeJobs.length === 0) stopPolling();
+}
+
+// ── Process video ──
 
 async function processVideo() {
   if (!schemaSelect.value) {
@@ -151,8 +206,10 @@ async function processVideo() {
   const selectedName =
     schemaSelect.options[schemaSelect.selectedIndex].textContent;
 
-  showState(stateProcessing);
-  processingSub.textContent = `Extracting to ${selectedName}…`;
+  // Briefly show submitting state
+  btnGlean.disabled = true;
+  statusDot.className = "dot dot-yellow pulse";
+  statusText.textContent = "Submitting…";
 
   try {
     const data = await apiFetch(`/agent/${selected.integration}/process`, {
@@ -163,24 +220,25 @@ async function processVideo() {
       }),
     });
 
-    if (data.success) {
-      successDetail.textContent = `Data saved to ${selectedName}`;
-      showState(stateSuccess);
-    } else {
-      throw new Error(data.error || "Extraction failed");
-    }
+    // Track the job
+    activeJobs.push({ id: data.job_id, name: selectedName });
+    updateJobBadge();
+    startPolling();
+
+    // Return to ready state
+    statusDot.className = "dot dot-green";
+    statusText.textContent = `Processing "${selectedName}"…`;
+    btnGlean.disabled = false;
+    updateGleanButton();
   } catch (err) {
     errorDetail.textContent = err.message || "Please try again";
     showState(stateError);
   }
 }
 
-// ── Initialization ──
-
 async function init() {
   showState(stateLoading);
 
-  // Get stored auth token
   const stored = await chrome.storage.local.get(["accessToken"]);
   accessToken = stored.accessToken || null;
 
@@ -189,20 +247,31 @@ async function init() {
     return;
   }
 
-  // Validate token by fetching schemas
   try {
     await detectCurrentTab();
     await loadSchemas();
     showState(stateDefault);
+
+    // Check for any active jobs from previous sessions
+    try {
+      const pending = await apiFetch("/agent/jobs?status=processing");
+      if (pending && pending.length > 0) {
+        activeJobs = pending.map((j) => ({
+          id: j.id,
+          name: j.source_id,
+        }));
+        updateJobBadge();
+        startPolling();
+      }
+    } catch {
+      // Non-critical, ignore
+    }
   } catch (err) {
-    // If token is invalid, sign-in state is already shown by apiFetch
     if (!accessToken) return;
     errorDetail.textContent = err.message || "Failed to initialize";
     showState(stateError);
   }
 }
-
-// ── Event listeners ──
 
 btnSignin.addEventListener("click", () => {
   chrome.tabs.create({ url: WEB_APP });
@@ -226,5 +295,4 @@ btnDone.addEventListener("click", () => {
 
 schemaSelect.addEventListener("change", updateGleanButton);
 
-// Start
 init();

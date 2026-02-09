@@ -72,16 +72,6 @@ async def refresh_token_endpoint(refresh_token: str = Body(...)) -> Dict[str, An
     return result
 
 
-@router.post("/refresh")
-async def refresh_token(refresh_token: str = Body(...)) -> Dict[str, Any]:
-    result = refresh_session(refresh_token)
-
-    if not result:
-        raise HTTPException(status_code=401, detail="Failed to refresh session")
-
-    return result
-
-
 @router.post("/connect/{integration}")
 async def connect_integration(
     integration: str = Path(...),

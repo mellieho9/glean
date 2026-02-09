@@ -1,11 +1,46 @@
+import json
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, HTTPException, Body, Path, Query, Header
 
 from services.schema_handler import get_schema_handler
 from services.user import get_current_user
+from services.database import read_rows, get_database_client
 
 
 router = APIRouter(prefix="/schema", tags=["schema"])
+
+
+@router.get("/configured")
+async def list_configured_schemas(
+    access_token: str = Header(..., alias="Authorization"),
+) -> List[Dict[str, Any]]:
+    user = get_current_user(access_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token or user not found")
+    try:
+        db_client = get_database_client(use_service_role=True)
+        result = read_rows(
+            "schemas",
+            filters={"user_id": user.id},
+            select="source_id,slug,schema",
+            client=db_client,
+        )
+        rows = result.get("data", [])
+        schemas = []
+        for row in rows:
+            schema_data = row.get("schema") or {}
+            if isinstance(schema_data, str):
+                schema_data = json.loads(schema_data)
+            schemas.append({
+                "source_id": row["source_id"],
+                "integration": row.get("slug", "notion"),
+                "name": schema_data.get("title", row["source_id"]),
+            })
+        return schemas
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list schemas: {str(e)}"
+        ) from e
 
 
 @router.get("/{integration}/sources")

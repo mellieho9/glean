@@ -187,7 +187,6 @@ class NotionHandler(SchemaHandler):
         return properties
 
     def _coerce_value(self, value: Any) -> str:
-        """Coerce extracted values to strings — Composio expects all values as strings."""
         if isinstance(value, dict):
             return ", ".join(f"{k}: {v}" for k, v in value.items())
         if isinstance(value, list):
