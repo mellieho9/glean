@@ -1,4 +1,3 @@
-/* ── Reset & Base ── */
 * {
   margin: 0;
   padding: 0;
@@ -25,14 +24,12 @@ body {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
-/* ── Popup Container ── */
 .popup {
   display: flex;
   flex-direction: column;
   min-height: 240px;
 }
 
-/* ── Header ── */
 .header {
   display: flex;
   align-items: center;
@@ -94,7 +91,6 @@ body {
   font-size: 20px;
 }
 
-/* ── Body ── */
 .body {
   padding: 4px 20px 16px;
   flex: 1;
@@ -110,7 +106,6 @@ body {
   padding-bottom: 20px;
 }
 
-/* ── Field Label ── */
 .field-label {
   display: block;
   font-size: 11px;
@@ -120,7 +115,6 @@ body {
   margin-bottom: 8px;
 }
 
-/* ── Select Dropdown ── */
 .select-wrapper {
   position: relative;
   margin-bottom: 16px;
@@ -155,6 +149,12 @@ body {
   position: absolute;
   right: 12px;
   top: 50%;
+  transform: translateY(-50%);
+  color: #71717a;
+  pointer-events: none;
+  font-size: 20px;
+}
+
 .btn-glean {
   width: 100%;
   display: flex;
@@ -194,13 +194,6 @@ body {
 .btn-glean .material-symbols-outlined {
   font-size: 20px;
 }
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-glean .material-symbols-outlined {
-  font-size: 20px;
-}
 
 .btn-retry {
   margin-top: 16px;
@@ -209,7 +202,13 @@ body {
   font-size: 13px;
 }
 
-/* ── Footer ── */
+.btn-signin {
+  margin-top: 16px;
+  width: auto;
+  padding: 12px 24px;
+  font-size: 13px;
+}
+
 .footer {
   display: flex;
   align-items: center;
@@ -252,13 +251,6 @@ body {
   color: #71717a;
 }
 
-.version {
-  font-size: 11px;
-  color: #3f3f46;
-  font-weight: 500;
-}
-
-/* ── Processing Spinner ── */
 .spinner-ring {
   width: 40px;
   height: 40px;
@@ -275,6 +267,37 @@ body {
   }
 }
 
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #27272a;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.progress-fill.indeterminate {
+  width: 40%;
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
 .processing-title {
   font-size: 15px;
   font-weight: 600;
@@ -287,7 +310,13 @@ body {
   color: #71717a;
 }
 
-/* ── Success ── */
+.signin-icon .material-symbols-outlined {
+  font-size: 44px;
+  color: #6366f1;
+  margin-bottom: 12px;
+  display: block;
+}
+
 .success-icon .material-symbols-outlined {
   font-size: 44px;
   color: #22c55e;
@@ -295,7 +324,6 @@ body {
   display: block;
 }
 
-/* ── Error ── */
 .error-icon .material-symbols-outlined {
   font-size: 44px;
   color: #ef4444;
@@ -303,7 +331,23 @@ body {
   display: block;
 }
 
-/* ── Pulse animation ── */
+.job-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 10px;
+  color: #818cf8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.job-badge .material-symbols-outlined {
+  font-size: 14px;
+  animation: spin 1.5s linear infinite;
+}
+
 .pulse {
   animation: pulse 1.5s ease-in-out infinite;
 }

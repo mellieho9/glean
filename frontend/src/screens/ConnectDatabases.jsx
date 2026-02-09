@@ -1,45 +1,90 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useOnboarding } from "../context/OnboardingContext";
+import { connectIntegration, listConnections } from "../utils/api";
 import PageLayout from "../components/PageLayout";
 import Icon from "../components/Icon";
 import SchemaCard from "../components/SchemaCard";
-import { mockDatabases } from "../utils/mockData";
+
+const INTEGRATIONS = [
+  {
+    slug: "notion",
+    name: "Notion",
+    description: "Sync video schemas to your Notion pages",
+  },
+];
 
 export default function ConnectDatabases() {
   const navigate = useNavigate();
-  const [databases, setDatabases] = useState(mockDatabases);
+  const { accessToken } = useAuth();
+  const { setIntegration } = useOnboarding();
+  const [connections, setConnections] = useState({});
+  const [connecting, setConnecting] = useState(null);
+  const [error, setError] = useState(null);
+  const hasConnection = Object.values(connections).some(Boolean);
 
-  const handleConnect = (id) => {
-    setDatabases((prev) =>
-      prev.map((db) => (db.id === id ? { ...db, connected: true } : db))
-    );
-    setTimeout(() => navigate("/select-schemas"), 600);
+  // Check existing connections on mount
+  useEffect(() => {
+    if (!accessToken) return;
+    listConnections(accessToken)
+      .then((data) => {
+        const map = {};
+        (data.connected || []).forEach((c) => {
+          map[c.slug] = true;
+        });
+        setConnections(map);
+      })
+      .catch(() => {}); // silently fail — user can still connect
+  }, [accessToken]);
+
+  const handleConnect = async (slug) => {
+    setConnecting(slug);
+    setError(null);
+    try {
+      await connectIntegration(slug, accessToken);
+      setConnections((prev) => ({ ...prev, [slug]: true }));
+      setIntegration(slug);
+      setTimeout(() => navigate("/select-schemas"), 400);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConnecting(null);
+    }
   };
 
   return (
     <PageLayout
       center
+      showAvatar
       step={0}
       title="Connect your databases"
       description="Link your data sources to get started."
     >
       <div className="grid gap-4">
-        {databases.map((db) => (
-          <SchemaCard
-            key={db.id}
-            as="button"
-            iconElement={<NotionIcon />}
-            title={db.name}
-            subtitle={db.description}
-            onClick={() => handleConnect(db.id)}
-            disabled={db.connected}
-            action={
-              db.connected && (
-                <Icon name="check_circle" className="text-primary text-2xl" />
-              )
-            }
-          />
-        ))}
+        {INTEGRATIONS.map((db) => {
+          const isConnected = connections[db.slug];
+          const isConnecting = connecting === db.slug;
+
+          return (
+            <SchemaCard
+              key={db.slug}
+              as="button"
+              iconElement={<NotionIcon />}
+              title={db.name}
+              subtitle={db.description}
+              onClick={() => handleConnect(db.slug)}
+              disabled={isConnected || isConnecting}
+              action={
+                isConnected ? (
+                  <Icon name="check_circle" className="text-primary text-2xl" />
+                ) : isConnecting ? (
+                  <div className="w-5 h-5 border-2 border-slate-200 border-t-primary rounded-full spinner" />
+                ) : null
+              }
+            />
+          );
+        })}
 
         <div className="bg-slate-50/50 border border-dashed border-slate-200 p-4 rounded-xl opacity-60">
           <div className="text-left">
@@ -50,6 +95,24 @@ export default function ConnectDatabases() {
           </div>
         </div>
       </div>
+
+      {hasConnection && (
+        <div className="mt-8">
+          <button
+            onClick={() => {
+              setIntegration(Object.keys(connections).find((k) => connections[k]) || "notion");
+              navigate("/select-schemas");
+            }}
+            className="w-full py-4 px-4 bg-primary text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
+      )}
     </PageLayout>
   );
 }

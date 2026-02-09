@@ -133,22 +133,6 @@ Generate the frozen extraction configuration.
     raise ValueError("No response received from prompt generation agent")
 
 
-def _apply_field_mappings(data: dict, field_mappings: list) -> dict:
-    mapping = {}
-    for m in field_mappings:
-        try:
-            extracted = (
-                m["extracted_field"] if isinstance(m, dict) else m.extracted_field
-            )
-            database = (
-                m["database_column"] if isinstance(m, dict) else m.database_column
-            )
-            mapping[extracted] = database
-        except Exception as e:
-            raise Exception(f"Error mapping fields: {str(e)}")
-    return {mapping.get(k, k): v for k, v in data.items()}
-
-
 def _parse_extracted_data(raw) -> dict:
     if not isinstance(raw, str):
         return raw
@@ -198,71 +182,47 @@ async def process_video(
     )
 
     try:
+        extraction_text = None
         async for event in runner.run_async(
-            session_id=session.id,
-            user_id="user",
-            new_message=content,
+            session_id=session.id, user_id="user", new_message=content,
         ):
-            if event.is_final_response():
-                pass
+            if getattr(event, "author", None) == "ContentExtractionAgent":
+                for part in (event.content and event.content.parts) or []:
+                    if getattr(part, "text", None):
+                        extraction_text = part.text
 
-        raw_content = session.state.get("extracted_content")
+        raw_content = session.state.get("extracted_content") or extraction_text
         critique_result = session.state.get("critique_result")
+        attempts = session.state.get("loop_iteration", 1)
 
         if raw_content is None:
+            return ProcessingResult(success=False, error="No extracted content found", attempts=attempts)
+
+        try:
+            extracted_data = _parse_extracted_data(raw_content)
+            print("Extracted_data", extracted_data)
+            if not isinstance(extracted_data, list):
+                extracted_data = [extracted_data]
+        except (json.JSONDecodeError, TypeError):
+            return ProcessingResult(success=False, extracted_data=[{"raw_output": raw_content}], error="Failed to parse extracted data", attempts=attempts)
+
+        critique_valid = getattr(critique_result, "valid", None) if not isinstance(critique_result, dict) else critique_result.get("valid", False)
+
+        if not (critique_valid or critique_result is None):
+            return ProcessingResult(success=False, extracted_data=extracted_data, critique=critique_result, error="Critique rejected extraction", attempts=attempts)
+
+        try:
+            result = handler.write_data(source_id, extracted_data)
+            wrote = result.get("success", False) if isinstance(result, dict) else False
             return ProcessingResult(
-                success=False,
-                error="No extracted content found in session state",
-                attempts=session.state.get("loop_iteration", 1),
+                success=wrote,
+                extracted_data=extracted_data,
+                critique=critique_result,
+                attempts=attempts,
+                error=None if wrote else f"Write failed: {result}",
             )
-
-        try:
-            extracted_data = _parse_extracted_data(raw_content)
-        except (json.JSONDecodeError, TypeError):
-            extracted_data = {"raw_output": raw_content, "parse_error": True}
-        critique_result = session.state.get("critique_result")
-
-        try:
-            extracted_data = _parse_extracted_data(raw_content)
-        except (json.JSONDecodeError, TypeError):
-            extracted_data = {"raw_output": raw_content, "parse_error": True}
-
-        critique_valid = False
-        if isinstance(critique_result, dict):
-            critique_valid = critique_result.get("valid", False)
-        elif hasattr(critique_result, "valid"):
-            critique_valid = critique_result.valid
-
-        # Write to database if critique passed
-        wrote_successfully = False
-        write_error = None
-        if critique_valid and extracted_data and not extracted_data.get("parse_error"):
-            mapped_data = (
-                _apply_field_mappings(extracted_data, field_mappings)
-                if field_mappings
-                else extracted_data
-            )
-            try:
-                result = handler.write_data(source_id, [mapped_data])
-                wrote_successfully = (
-                    result.get("success", False) if isinstance(result, dict) else False
-                )
-                if not wrote_successfully:
-                    write_error = f"Write failed: {result}"
-            except Exception as e:
-                write_error = f"Write exception: {str(e)}"
-
-        return ProcessingResult(
-            success=wrote_successfully,
-            extracted_data=extracted_data,
-            critique=critique_result,
-            attempts=session.state.get("loop_iteration", 1),
-            error=write_error,
-        )
+        except Exception as e:
+            return ProcessingResult(success=False, extracted_data=extracted_data, critique=critique_result, error=f"Write exception: {e}", attempts=attempts)
 
     except Exception as e:
-        return ProcessingResult(
-            success=False,
-            error=f"Processing failed: {str(e)}",
-            attempts=0,
-        )
+        return ProcessingResult(success=False, error=f"Processing failed: {e}", attempts=0)

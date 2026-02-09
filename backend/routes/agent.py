@@ -1,10 +1,12 @@
+import asyncio
 import json
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, Body, Path, Header
+from typing import Dict, Any, List
+from fastapi import APIRouter, HTTPException, Body, Path, Header, Query
 
 from services.user import get_current_user
 from services.schema_handler import get_schema_handler
 from services.database import read_rows, create_row, update_rows, get_database_client
+
 from services.agents.pipeline import (
     run_onboarding_chain,
     run_prompt_generation,
@@ -23,10 +25,12 @@ def _get_authenticated_user(access_token: str):
 
 
 def _get_schema_row(user_id: str, source_id: str) -> Dict[str, Any]:
+    db_client = get_database_client(use_service_role=True)
     result = read_rows(
         "schemas",
         filters={"user_id": user_id, "source_id": source_id},
         limit=1,
+        client=db_client,
     )
     rows = result.get("data", [])
     if not rows:
@@ -34,6 +38,61 @@ def _get_schema_row(user_id: str, source_id: str) -> Dict[str, Any]:
             status_code=404, detail="Schema not configured for this source"
         )
     return rows[0]
+
+
+@router.get("/jobs")
+async def list_jobs(
+    access_token: str = Header(..., alias="Authorization"),
+    status: str = Query(None),
+) -> List[Dict[str, Any]]:
+    user = _get_authenticated_user(access_token)
+    db_client = get_database_client(use_service_role=True)
+    filters = {"user_id": user.id}
+    if status:
+        filters["status"] = status
+    result = read_rows(
+        "jobs",
+        filters=filters,
+        select="id,status,integration,source_id,url,error,created_at,updated_at",
+        order_by="created_at",
+        ascending=False,
+        client=db_client,
+    )
+    return result.get("data", [])
+
+
+@router.get("/jobs/{job_id}")
+async def get_job_status(
+    job_id: str = Path(...),
+    access_token: str = Header(..., alias="Authorization"),
+) -> Dict[str, Any]:
+    user = _get_authenticated_user(access_token)
+    db_client = get_database_client(use_service_role=True)
+    result = read_rows(
+        "jobs",
+        filters={"id": job_id, "user_id": user.id},
+        limit=1,
+        client=db_client,
+    )
+    rows = result.get("data", [])
+    if not rows:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job = rows[0]
+    response = {
+        "job_id": job["id"],
+        "status": job["status"],
+        "url": job.get("url"),
+        "created_at": job.get("created_at"),
+    }
+    if job["status"] == "completed":
+        raw_result = job.get("result")
+        response["result"] = (
+            json.loads(raw_result) if isinstance(raw_result, str) else raw_result
+        )
+    elif job["status"] == "failed":
+        response["error"] = job.get("error")
+    return response
 
 
 @router.post("/{integration}/onboarding/questions")
@@ -48,8 +107,13 @@ async def generate_questions(
         schema = handler.get_schema(source_id)
         tag = schema.get("title", source_id)
 
-        questions = await run_onboarding_chain(schema, tag, db_type=integration)
-        return {"source_id": source_id, "tag": tag, "questions": questions}
+        result = await run_onboarding_chain(schema, tag, db_type=integration)
+        return {
+            "source_id": source_id,
+            "tag": tag,
+            "schema_summary": result.schema_summary,
+            "questions": [q.model_dump() for q in result.questions],
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -127,15 +191,11 @@ async def configure_schema(
         ) from e
 
 
-@router.post("/{integration}/process")
-async def process_video_endpoint(
-    integration: str = Path(...),
-    access_token: str = Header(..., alias="Authorization"),
-    youtube_url: str = Body(...),
-    source_id: str = Body(...),
-) -> Dict[str, Any]:
-    user = _get_authenticated_user(access_token)
+async def _run_job(job_id: str, user, integration: str, youtube_url: str, source_id: str):
+    db_client = get_database_client(use_service_role=True)
     try:
+        update_rows("jobs", filters={"id": job_id}, data={"status": "processing"}, client=db_client)
+
         schema_row = _get_schema_row(user.id, source_id)
         raw_prompt = schema_row["prompt"]
         extraction_config = (
@@ -150,18 +210,63 @@ async def process_video_endpoint(
             source_id=source_id,
         )
 
-        return {
-            "success": result.success,
-            "extracted_data": result.extracted_data,
-            "critique": result.critique,
-            "attempts": result.attempts,
-            "error": result.error,
-        }
+        update_rows(
+            "jobs",
+            filters={"id": job_id},
+            data={
+                "status": "completed" if result.success else "failed",
+                "result": json.dumps({
+                    "extracted_data": result.extracted_data,
+                    "critique": result.critique,
+                    "attempts": result.attempts,
+                }),
+                "error": result.error,
+            },
+            client=db_client,
+        )
+    except Exception as e:
+        update_rows(
+            "jobs",
+            filters={"id": job_id},
+            data={"status": "failed", "error": str(e)},
+            client=db_client,
+        )
+
+
+@router.post("/{integration}/process")
+async def process_video_endpoint(
+    integration: str = Path(...),
+    access_token: str = Header(..., alias="Authorization"),
+    youtube_url: str = Body(...),
+    source_id: str = Body(...),
+) -> Dict[str, Any]:
+    user = _get_authenticated_user(access_token)
+    try:
+        # Validate schema exists before creating the job
+        _get_schema_row(user.id, source_id)
+
+        db_client = get_database_client(use_service_role=True)
+        job_row = create_row(
+            "jobs",
+            {
+                "user_id": user.id,
+                "status": "pending",
+                "integration": integration,
+                "source_id": source_id,
+                "url": youtube_url,
+            },
+            client=db_client,
+        )
+        job_id = job_row["data"]["id"]
+
+        asyncio.create_task(_run_job(job_id, user, integration, youtube_url, source_id))
+
+        return {"job_id": job_id, "status": "pending"}
     except HTTPException:
         raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Video processing failed: {str(e)}"
+            status_code=500, detail=f"Failed to submit job: {str(e)}"
         ) from e

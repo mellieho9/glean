@@ -1,9 +1,34 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { initiateOAuth } from "../utils/api";
 import Icon from "../components/Icon";
 import SchemaCard from "../components/SchemaCard";
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState(null);
+
+  // If already logged in, redirect to connect
+  if (!loading && user) {
+    navigate("/connect", { replace: true });
+    return null;
+  }
+
+  const handleGoogleSignIn = async () => {
+    setSigningIn(true);
+    setError(null);
+    try {
+      const callbackUrl = `${window.location.origin}/auth/callback`;
+      const { url } = await initiateOAuth("google", callbackUrl);
+      window.location.href = url;
+    } catch (err) {
+      setError(err.message);
+      setSigningIn(false);
+    }
+  };
 
   return (
     <div className="bg-white text-slate-900 overflow-hidden min-h-screen flex items-center justify-center p-6">
@@ -25,10 +50,15 @@ export default function SignIn() {
         <SchemaCard
           as="button"
           centered
+          disabled={signingIn}
           iconElement={<GoogleIcon />}
-          title="Continue with Google"
-          onClick={() => navigate("/connect")}
+          title={signingIn ? "Signing in…" : "Continue with Google"}
+          onClick={handleGoogleSignIn}
         />
+
+        {error && (
+          <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
+        )}
       </main>
     </div>
   );

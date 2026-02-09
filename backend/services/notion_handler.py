@@ -86,7 +86,6 @@ class NotionHandler(SchemaHandler):
             name: info.get("type", "rich_text")
             for name, info in schema.get("properties", {}).items()
         }
-
         results = []
         errors = []
         created_count = 0
@@ -179,9 +178,22 @@ class NotionHandler(SchemaHandler):
         for key, value in data.items():
             if value is None:
                 continue
-            notion_type = prop_types.get(key, "rich_text")
+            key = key.replace("_"," ")
+            notion_type = prop_types.get(key)
+            if not notion_type:
+                continue
+            value = self._coerce_value(value)
             properties.append({"name": key, "type": notion_type, "value": value})
         return properties
+
+    def _coerce_value(self, value: Any) -> str:
+        if isinstance(value, dict):
+            return ", ".join(f"{k}: {v}" for k, v in value.items())
+        if isinstance(value, list):
+            return ", ".join(str(v) for v in value)
+        if isinstance(value, bool):
+            return str(value).lower()
+        return str(value)
 
     def _convert_to_notion_properties(self, data: Dict[str, Any]) -> Dict[str, Any]:
         properties = {}

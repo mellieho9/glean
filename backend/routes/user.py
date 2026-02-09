@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi import APIRouter, HTTPException, Query, Body, Path, Header
 from services.user import (
     sign_in_with_oauth,
     exchange_code_for_session,
@@ -7,6 +7,8 @@ from services.user import (
     sign_out,
     refresh_session,
 )
+from services.adaptor import authorize_integration, check_user_connections
+from services.database import get_database_client
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -70,11 +72,34 @@ async def refresh_token_endpoint(refresh_token: str = Body(...)) -> Dict[str, An
     return result
 
 
-@router.post("/refresh")
-async def refresh_token(refresh_token: str = Body(...)) -> Dict[str, Any]:
-    result = refresh_session(refresh_token)
+@router.post("/connect/{integration}")
+async def connect_integration(
+    integration: str = Path(...),
+    access_token: str = Header(..., alias="Authorization"),
+) -> Dict[str, Any]:
+    user = get_current_user(access_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token or user not found")
+    try:
+        db_client = get_database_client(use_service_role=True)
+        result = authorize_integration(user, integration, db_client=db_client)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to connect integration: {str(e)}"
+        ) from e
 
-    if not result:
-        raise HTTPException(status_code=401, detail="Failed to refresh session")
 
-    return result
+@router.get("/connections")
+async def list_connections(
+    access_token: str = Header(..., alias="Authorization"),
+) -> Dict[str, Any]:
+    user = get_current_user(access_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token or user not found")
+    try:
+        return check_user_connections(user)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to check connections: {str(e)}"
+        ) from e
