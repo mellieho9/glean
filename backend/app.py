@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.user import router as user_router
@@ -8,9 +10,13 @@ app = FastAPI(
     title="Glean API", description="APIs for the Glean project", version="1.0.0"
 )
 
+origins = ["http://localhost:5173", "http://localhost:3000"]
+if os.environ.get("FRONTEND_URL"):
+    origins.append(os.environ["FRONTEND_URL"])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
