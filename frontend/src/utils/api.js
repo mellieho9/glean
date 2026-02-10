@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 function authHeaders(token) {
   return token ? { Authorization: token } : {};
@@ -49,6 +49,12 @@ export function signOut(accessToken) {
 export function connectIntegration(integration, accessToken) {
   return request(`/auth/connect/${integration}`, {
     method: "POST",
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function checkConnectionStatus(integration, accessToken) {
+  return request(`/auth/connect/${integration}/status`, {
     headers: authHeaders(accessToken),
   });
 }

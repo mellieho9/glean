@@ -24,19 +24,21 @@ export default function SelectSchemas() {
     ])
       .then(([data, configured]) => {
         if (cancelled) return;
-        const list = Array.isArray(data) ? data : [];
-        setSources(list);
+        const allSources = Array.isArray(data) ? data : [];
 
         const configuredIds = new Set(
           (Array.isArray(configured) ? configured : []).map((s) => s.source_id)
         );
+
+        // Only show sources that haven't been configured yet
+        const list = allSources.filter(
+          (s) => !configuredIds.has(s.id || s.source_id)
+        );
+        setSources(list);
+
+        // Default to first unconfigured source
         const initial = {};
-        for (const s of list) {
-          const id = s.id || s.source_id;
-          if (configuredIds.has(id)) initial[id] = true;
-        }
-        // If nothing was configured, default to the first source
-        if (Object.keys(initial).length === 0 && list.length > 0) {
+        if (list.length > 0) {
           initial[list[0].id || list[0].source_id] = true;
         }
         setSelected(initial);
