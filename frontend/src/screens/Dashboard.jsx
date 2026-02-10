@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useOnboarding } from "../context/OnboardingContext";
 import {
   listConnections,
   listConfiguredSchemas,
@@ -191,6 +192,7 @@ function JobCard({ job, schemaName, accessToken }) {
 
 export default function Dashboard() {
   const { accessToken, loading: authLoading } = useAuth();
+  const { setSelectedSources, setIntegration } = useOnboarding();
   const navigate = useNavigate();
 
   const [connections, setConnections] = useState([]);
@@ -306,7 +308,11 @@ export default function Dashboard() {
                   title={schema.name}
                   action={
                     <button
-                      onClick={() => navigate("/configure")}
+                      onClick={() => {
+                        setIntegration(schema.integration || "notion");
+                        setSelectedSources([{ id: schema.source_id, name: schema.name }]);
+                        navigate("/configure");
+                      }}
                       className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                     >
                       Reconfigure

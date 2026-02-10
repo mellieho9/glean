@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOnboarding } from "../context/OnboardingContext";
-import { connectIntegration, listConnections } from "../utils/api";
+import { connectIntegration, checkConnectionStatus, listConnections } from "../utils/api";
 import PageLayout from "../components/PageLayout";
 import Icon from "../components/Icon";
 import SchemaCard from "../components/SchemaCard";
@@ -42,13 +42,37 @@ export default function ConnectDatabases() {
     setConnecting(slug);
     setError(null);
     try {
-      await connectIntegration(slug, accessToken);
-      setConnections((prev) => ({ ...prev, [slug]: true }));
-      setIntegration(slug);
-      setTimeout(() => navigate("/select-schemas"), 400);
+      const { redirect_url } = await connectIntegration(slug, accessToken);
+      // Open Notion OAuth in a new tab
+      const oauthWindow = window.open(redirect_url, "_blank");
+
+      // Poll existing connections endpoint (fast, already proven to work)
+      const poll = setInterval(async () => {
+        try {
+          const data = await listConnections(accessToken);
+          const isConnected = (data.connected || []).some((c) => c.slug === slug);
+          if (isConnected) {
+            clearInterval(poll);
+            if (oauthWindow && !oauthWindow.closed) oauthWindow.close();
+            // Save integration to DB (fire-and-forget)
+            checkConnectionStatus(slug, accessToken).catch(() => {});
+            setConnections((prev) => ({ ...prev, [slug]: true }));
+            setConnecting(null);
+            setIntegration(slug);
+            setTimeout(() => navigate("/select-schemas"), 400);
+          }
+        } catch {
+          // keep polling
+        }
+      }, 3000);
+
+      // Stop polling after 2 minutes
+      setTimeout(() => {
+        clearInterval(poll);
+        setConnecting(null);
+      }, 120000);
     } catch (err) {
       setError(err.message);
-    } finally {
       setConnecting(null);
     }
   };

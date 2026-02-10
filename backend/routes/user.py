@@ -7,7 +7,7 @@ from services.user import (
     sign_out,
     refresh_session,
 )
-from services.adaptor import authorize_integration, check_user_connections
+from services.adaptor import initiate_integration, save_integration, check_user_connections
 from services.database import get_database_client
 
 
@@ -81,12 +81,29 @@ async def connect_integration(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token or user not found")
     try:
-        db_client = get_database_client(use_service_role=True)
-        result = authorize_integration(user, integration, db_client=db_client)
+        result = initiate_integration(user, integration)
         return result
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to connect integration: {str(e)}"
+        ) from e
+
+
+@router.get("/connect/{integration}/status")
+async def connect_integration_status(
+    integration: str = Path(...),
+    access_token: str = Header(..., alias="Authorization"),
+) -> Dict[str, Any]:
+    user = get_current_user(access_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token or user not found")
+    try:
+        db_client = get_database_client(use_service_role=True)
+        result = save_integration(user, integration, db_client=db_client)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to check integration status: {str(e)}"
         ) from e
 
 

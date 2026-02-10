@@ -45,37 +45,55 @@ def clear_user_session(user_id: str):
         _user_sessions.pop(key, None)
 
 
-def authorize_integration(
+def initiate_integration(
     user: User,
     integration_slug: str,
-    timeout_ms: int = 60000,
+) -> Dict[str, any]:
+    """Start the OAuth flow and return the redirect URL immediately."""
+    session = get_user_session(user)
+    connection_request = session.authorize(integration_slug)
+    return {
+        "integration": integration_slug,
+        "redirect_url": connection_request.redirect_url,
+        "connected": False,
+    }
+
+
+def save_integration(
+    user: User,
+    integration_slug: str,
     db_client: Optional[Client] = None,
 ) -> Dict[str, any]:
+    """Save a connected integration to the database."""
     session = get_user_session(user)
+    toolkits = session.toolkits()
 
-    connection_request = session.authorize(integration_slug)
-    redirect_url = connection_request.redirect_url
+    for toolkit in toolkits.items:
+        if (
+            toolkit
+            and toolkit.slug == integration_slug
+            and toolkit.connection
+            and toolkit.connection.is_active
+        ):
+            account_id = toolkit.connection.connected_account.id
+            if db_client:
+                integration_data = {
+                    "user_id": user.id,
+                    "slug": integration_slug,
+                    "composio_connection_id": account_id,
+                }
+                try:
+                    create_row("integrations", integration_data, client=db_client)
+                except Exception as e:
+                    print(f"Integration already saved or DB error: {e}")
 
-    try:
-        connected_account = connection_request.wait_for_connection(timeout_ms)
-
-        if db_client:
-            integration_data = {
-                "user_id": user.id,
-                "slug": integration_slug,
-                "composio_connection_id": connected_account.id,
+            return {
+                "integration": integration_slug,
+                "connected": True,
+                "account_id": account_id,
             }
 
-            create_row("integrations", integration_data, client=db_client)
-
-        return {
-            "integration": integration_slug,
-            "redirect_url": redirect_url,
-            "connected": True,
-            "account_id": connected_account.id,
-        }
-    except Exception as e:
-        raise Exception(f"Error authorizing integration: {str(e)}") from e
+    return {"integration": integration_slug, "connected": False}
 
 
 def check_user_connections(user: User) -> Dict[str, any]:

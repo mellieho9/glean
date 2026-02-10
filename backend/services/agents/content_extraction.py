@@ -38,6 +38,8 @@ Call the appropriate tool when you need verified information beyond what's in th
 
 ## Expected Output Schema:
 {extraction_config["output_schema"]}
+
+If you receive critique feedback from a previous attempt, carefully address ALL issues raised and re-extract using the EXACT field names from the schema above.
 """
 
     return LlmAgent(

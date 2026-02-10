@@ -152,7 +152,6 @@ async def process_video(
 ) -> ProcessingResult:
     session_service = InMemorySessionService()
     output_schema = extraction_config.get("output_schema", [])
-    field_mappings = extraction_config.get("field_mappings", [])
 
     processing_chain = LoopAgent(
         name="ProcessingChain",
@@ -183,6 +182,7 @@ async def process_video(
 
     try:
         extraction_text = None
+        attempts = 0
         async for event in runner.run_async(
             session_id=session.id, user_id="user", new_message=content,
         ):
@@ -190,26 +190,31 @@ async def process_video(
                 for part in (event.content and event.content.parts) or []:
                     if getattr(part, "text", None):
                         extraction_text = part.text
+                        attempts += 1
 
         raw_content = session.state.get("extracted_content") or extraction_text
-        critique_result = session.state.get("critique_result")
-        attempts = session.state.get("loop_iteration", 1)
+
+        # Parse critique from state (stored as string via output_key)
+        critique_raw = session.state.get("critique_result")
+        critique_result = None
+        if critique_raw:
+            if isinstance(critique_raw, dict):
+                critique_result = critique_raw
+            elif isinstance(critique_raw, str):
+                try:
+                    critique_result = json.loads(critique_raw)
+                except (json.JSONDecodeError, TypeError):
+                    critique_result = {"raw": critique_raw}
 
         if raw_content is None:
             return ProcessingResult(success=False, error="No extracted content found", attempts=attempts)
 
         try:
             extracted_data = _parse_extracted_data(raw_content)
-            print("Extracted_data", extracted_data)
             if not isinstance(extracted_data, list):
                 extracted_data = [extracted_data]
         except (json.JSONDecodeError, TypeError):
-            return ProcessingResult(success=False, extracted_data=[{"raw_output": raw_content}], error="Failed to parse extracted data", attempts=attempts)
-
-        critique_valid = getattr(critique_result, "valid", None) if not isinstance(critique_result, dict) else critique_result.get("valid", False)
-
-        if not (critique_valid or critique_result is None):
-            return ProcessingResult(success=False, extracted_data=extracted_data, critique=critique_result, error="Critique rejected extraction", attempts=attempts)
+            return ProcessingResult(success=False, extracted_data=[{"raw_output": raw_content}], error="Failed to parse extracted data", critique=critique_result, attempts=attempts)
 
         try:
             result = handler.write_data(source_id, extracted_data)

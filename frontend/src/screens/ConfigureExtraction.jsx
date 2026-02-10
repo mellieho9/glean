@@ -174,7 +174,6 @@ export default function ConfigureExtraction() {
       center
       step={2}
       title="Configure Data Extraction"
-      description={`Our agent has generated questions to define extraction rules for your selected schema${plural ? "s" : ""}.`}
     >
       {loading ? (
         <div className="flex flex-col items-center py-8 gap-3">
