@@ -65,27 +65,33 @@ def save_integration(
     db_client: Optional[Client] = None,
 ) -> Dict[str, any]:
     """Save a connected integration to the database."""
+    # Clear cached session so we get fresh connection state after OAuth
+    clear_user_session(user.id)
     session = get_user_session(user)
     toolkits = session.toolkits()
 
+    all_slugs = [getattr(t, "slug", None) for t in (toolkits.items or [])]
+    print(f"[save_integration] user={user.id} looking for slug='{integration_slug}' found={all_slugs}")
+
     for toolkit in toolkits.items:
-        if (
-            toolkit
-            and toolkit.slug == integration_slug
-            and toolkit.connection
-            and toolkit.connection.is_active
-        ):
+        slug_match = toolkit and toolkit.slug.lower() == integration_slug.lower()
+        has_connection = toolkit and toolkit.connection is not None
+        is_active = has_connection and toolkit.connection.is_active
+        print(f"[save_integration] toolkit={getattr(toolkit, 'slug', None)} slug_match={slug_match} has_connection={has_connection} is_active={is_active}")
+
+        if slug_match and is_active:
             account_id = toolkit.connection.connected_account.id
             if db_client:
                 integration_data = {
                     "user_id": user.id,
-                    "slug": integration_slug,
+                    "slug": integration_slug.lower(),
                     "composio_connection_id": account_id,
                 }
                 try:
                     create_row("integrations", integration_data, client=db_client)
+                    print(f"[save_integration] saved integration for user={user.id} slug={integration_slug}")
                 except Exception as e:
-                    print(f"Integration already saved or DB error: {e}")
+                    print(f"[save_integration] DB error (may already exist): {e}")
 
             return {
                 "integration": integration_slug,
@@ -93,6 +99,7 @@ def save_integration(
                 "account_id": account_id,
             }
 
+    print(f"[save_integration] no active connection found for slug='{integration_slug}'")
     return {"integration": integration_slug, "connected": False}
 
 

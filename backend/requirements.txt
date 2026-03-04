@@ -6,3 +6,6 @@ uvicorn
 composio
 ruff
 google-adk
+boto3
+httpx
+beautifulsoup4

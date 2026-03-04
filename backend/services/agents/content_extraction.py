@@ -28,7 +28,7 @@ def create_extraction_agent(extraction_config: dict) -> LlmAgent:
 Use these tools to enhance extraction accuracy:
 {chr(10).join(tool_instructions)}
 
-Call the appropriate tool when you need verified information beyond what's in the video.
+Call the appropriate tool when you need verified information beyond what's in the content.
 """
 
     full_instruction = f"""{EXTRACTION_INSTRUCTION}
@@ -46,7 +46,7 @@ If you receive critique feedback from a previous attempt, carefully address ALL 
         name="ContentExtractionAgent",
         model="gemini-3-flash-preview",
         instruction=full_instruction,
-        description="Extracts structured data from YouTube videos",
+        description="Extracts structured data from videos, PDFs, and web pages",
         tools=tools,
         output_key="extracted_content",
     )

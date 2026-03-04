@@ -18,6 +18,10 @@ backend/.ruff_cache
 # Config
 .mcp.json
 
+# Extension
+extension/.env
+extension/config.js
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
@@ -26,3 +30,9 @@ frontend/.env
 # Agents
 */AGENTS.md
 .vercel
+
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars.backup

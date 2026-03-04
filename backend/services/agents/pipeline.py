@@ -1,4 +1,9 @@
 import json
+import os
+
+import httpx
+from bs4 import BeautifulSoup
+from google import genai as google_genai
 from google.adk.agents import LoopAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -143,8 +148,58 @@ def _parse_extracted_data(raw) -> dict:
     return json.loads(raw)
 
 
+# ── Platform detection ──
+
+def _is_youtube(url: str) -> bool:
+    return any(x in url for x in ("youtube.com/watch", "youtube.com/shorts", "youtu.be/"))
+
+
+def _is_tiktok(url: str) -> bool:
+    return "tiktok.com/@" in url and "/video/" in url
+
+
+def _is_pdf(url: str) -> bool:
+    path = url.split("?")[0].lower()
+    return path.endswith(".pdf")
+
+
+async def _upload_tiktok_video(url: str) -> types.Part:
+    raise NotImplementedError("TikTok video processing is not currently supported")
+
+
+async def _fetch_pdf_inline(url: str) -> types.Part:
+    """Fetch PDF bytes from URL and pass as inline data (per Gemini document processing docs)."""
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+    return types.Part.from_bytes(data=resp.content, mime_type="application/pdf")
+
+
+async def _fetch_webpage_part(url: str) -> types.Part:
+    """Fetch a webpage and return its text content as a Gemini text Part."""
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+        resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    text = soup.get_text(separator="\n", strip=True)
+    return types.Part(text=f"Web page from {url}:\n\n{text[:50000]}")
+
+
+async def _get_content_part(url: str) -> types.Part:
+    """Return the appropriate Gemini content Part for any URL type."""
+    if _is_youtube(url):
+        return types.Part(file_data=types.FileData(file_uri=url))
+    if _is_tiktok(url):
+        return await _upload_tiktok_video(url)
+    if _is_pdf(url):
+        return await _fetch_pdf_inline(url)
+    return await _fetch_webpage_part(url)
+
+
 async def process_video(
-    youtube_url: str,
+    url: str,
     extraction_config: dict,
     handler: SchemaHandler,
     source_id: str,
@@ -157,7 +212,7 @@ async def process_video(
         name="ProcessingChain",
         sub_agents=[
             create_extraction_agent(extraction_config),
-            create_critique_agent(output_schema),
+            create_critique_agent(output_schema, handler, source_id),
         ],
         max_iterations=max_retries + 1,
     )
@@ -173,9 +228,9 @@ async def process_video(
     content = types.Content(
         role="user",
         parts=[
-            types.Part(file_data=types.FileData(file_uri=youtube_url)),
+            await _get_content_part(url),
             types.Part(
-                text="Extract information from this video following the instructions. Output valid JSON."
+                text="Extract information from this content following the instructions. Output valid JSON."
             ),
         ],
     )
@@ -216,18 +271,26 @@ async def process_video(
         except (json.JSONDecodeError, TypeError):
             return ProcessingResult(success=False, extracted_data=[{"raw_output": raw_content}], error="Failed to parse extracted data", critique=critique_result, attempts=attempts)
 
-        try:
-            result = handler.write_data(source_id, extracted_data)
-            wrote = result.get("success", False) if isinstance(result, dict) else False
+        # Write was attempted inside the critique agent's try_write_and_exit tool.
+        write_result = session.state.get("write_result")
+        if write_result is None:
+            # Loop hit max_iterations without a successful write
             return ProcessingResult(
-                success=wrote,
+                success=False,
                 extracted_data=extracted_data,
                 critique=critique_result,
                 attempts=attempts,
-                error=None if wrote else f"Write failed: {result}",
+                error="Max retries reached without a successful write",
             )
-        except Exception as e:
-            return ProcessingResult(success=False, extracted_data=extracted_data, critique=critique_result, error=f"Write exception: {e}", attempts=attempts)
+
+        wrote = write_result.get("success", False)
+        return ProcessingResult(
+            success=wrote,
+            extracted_data=extracted_data,
+            critique=critique_result,
+            attempts=attempts,
+            error=None if wrote else f"Write failed: {write_result.get('errors')}",
+        )
 
     except Exception as e:
         return ProcessingResult(success=False, error=f"Processing failed: {e}", attempts=0)

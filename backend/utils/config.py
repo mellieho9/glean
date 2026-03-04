@@ -13,6 +13,12 @@ class Config:
             "SUPABASE_SERVICE_ROLE_KEY"
         )
         self.google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
+        self.composio_api_key: str = os.getenv("COMPOSIO_API_KEY", "")
+
+        # AWS config — populated by ECS task definition at runtime
+        self.aws_region: str = os.getenv("AWS_REGION", "us-east-1")
+        self.s3_bucket_name: str = os.getenv("S3_BUCKET_NAME", "")
+        self.environment: str = os.getenv("ENVIRONMENT", "development")
 
     def validate(self) -> bool:
         if not self.supabase_url:

@@ -1,4 +1,4 @@
-const WEB_APP = "http://localhost:5173";
+let WEB_APP = "http://localhost:5173";
 
 const stateSignin = document.getElementById("state-signin");
 const stateLoading = document.getElementById("state-loading");
@@ -23,7 +23,7 @@ const jobBadge = document.getElementById("job-badge");
 const jobCount = document.getElementById("job-count");
 
 let currentTabUrl = null;
-let isYouTube = false;
+let isSupportedPage = false;
 let accessToken = null;
 let activeJobs = [];
 let pollTimer = null;
@@ -72,17 +72,39 @@ async function detectCurrentTab() {
   if (!tab?.url) return;
 
   currentTabUrl = tab.url;
-  isYouTube =
+
+  const isYouTube =
     currentTabUrl.includes("youtube.com/watch") ||
     currentTabUrl.includes("youtube.com/shorts") ||
     currentTabUrl.includes("youtu.be/");
 
+  const isTikTok =
+    currentTabUrl.includes("tiktok.com/@") &&
+    currentTabUrl.includes("/video/");
+
+  const isPdf = currentTabUrl.split("?")[0].toLowerCase().endsWith(".pdf");
+
+  const isHttp =
+    currentTabUrl.startsWith("http://") ||
+    currentTabUrl.startsWith("https://");
+
+  isSupportedPage = isHttp;
+
   if (isYouTube) {
     statusDot.className = "dot dot-green";
     statusText.textContent = "YouTube video detected";
+  } else if (isTikTok) {
+    statusDot.className = "dot dot-green";
+    statusText.textContent = "TikTok video detected";
+  } else if (isPdf) {
+    statusDot.className = "dot dot-green";
+    statusText.textContent = "PDF document detected";
+  } else if (isHttp) {
+    statusDot.className = "dot dot-green";
+    statusText.textContent = "Web page detected";
   } else {
     statusDot.className = "dot dot-gray";
-    statusText.textContent = "Not a YouTube video";
+    statusText.textContent = "Not a supported page";
   }
   updateGleanButton();
 }
@@ -130,7 +152,7 @@ async function loadSchemas() {
 }
 
 function updateGleanButton() {
-  btnGlean.disabled = !isYouTube || !schemaSelect.value;
+  btnGlean.disabled = !isSupportedPage || !schemaSelect.value;
 }
 
 // ── Job tracking ──
@@ -215,7 +237,7 @@ async function processVideo() {
     const data = await apiFetch(`/agent/${selected.integration}/process`, {
       method: "POST",
       body: JSON.stringify({
-        youtube_url: currentTabUrl,
+        video_url: currentTabUrl,
         source_id: selected.source_id,
       }),
     });
@@ -238,6 +260,16 @@ async function processVideo() {
 
 async function init() {
   showState(stateLoading);
+
+  // Load config from background.js (env-aware WEB_APP)
+  try {
+    const config = await new Promise((resolve) =>
+      chrome.runtime.sendMessage({ type: "GET_CONFIG" }, resolve)
+    );
+    if (config?.WEB_APP) WEB_APP = config.WEB_APP;
+  } catch {
+    // Fallback to default WEB_APP
+  }
 
   const stored = await chrome.storage.local.get(["accessToken"]);
   accessToken = stored.accessToken || null;

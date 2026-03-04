@@ -191,7 +191,7 @@ async def configure_schema(
         ) from e
 
 
-async def _run_job(job_id: str, user, integration: str, youtube_url: str, source_id: str):
+async def _run_job(job_id: str, user, integration: str, url: str, source_id: str):
     db_client = get_database_client(use_service_role=True)
     try:
         update_rows("jobs", filters={"id": job_id}, data={"status": "processing"}, client=db_client)
@@ -204,7 +204,7 @@ async def _run_job(job_id: str, user, integration: str, youtube_url: str, source
 
         handler = get_schema_handler(user, integration)
         result = await process_video(
-            youtube_url=youtube_url,
+            url=url,
             extraction_config=extraction_config,
             handler=handler,
             source_id=source_id,
@@ -237,7 +237,7 @@ async def _run_job(job_id: str, user, integration: str, youtube_url: str, source
 async def process_video_endpoint(
     integration: str = Path(...),
     access_token: str = Header(..., alias="Authorization"),
-    youtube_url: str = Body(...),
+    url: str = Body(...),
     source_id: str = Body(...),
 ) -> Dict[str, Any]:
     user = _get_authenticated_user(access_token)
@@ -253,13 +253,13 @@ async def process_video_endpoint(
                 "status": "pending",
                 "integration": integration,
                 "source_id": source_id,
-                "url": youtube_url,
+                "url": url,
             },
             client=db_client,
         )
         job_id = job_row["data"]["id"]
 
-        asyncio.create_task(_run_job(job_id, user, integration, youtube_url, source_id))
+        asyncio.create_task(_run_job(job_id, user, integration, url, source_id))
 
         return {"job_id": job_id, "status": "pending"}
     except HTTPException:

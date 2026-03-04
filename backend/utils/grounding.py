@@ -1,5 +1,6 @@
 from google.adk.agents import LlmAgent
-from google.adk.tools import google_search, AgentTool
+from google.adk.tools import google_search
+from google.adk.tools.agent_tool import AgentTool
 from google.adk.tools.google_maps_grounding_tool import GoogleMapsGroundingTool
 
 _maps_agent = LlmAgent(

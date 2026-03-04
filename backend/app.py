@@ -2,6 +2,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from routes.user import router as user_router
 from routes.schema import router as schema_router
 from routes.agent import router as agent_router
@@ -21,6 +22,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+async def health_check():
+    return JSONResponse({"status": "ok"})
+
 
 app.include_router(user_router)
 app.include_router(schema_router)

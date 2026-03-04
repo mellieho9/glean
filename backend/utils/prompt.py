@@ -6,7 +6,7 @@ Generate questions that resolve ambiguity in how to extract data for each field.
 ## Question Categories:
 
 ### 1. Content Scope Questions
-- What types of videos will be saved here?
+- What types of content will be saved here? (e.g. YouTube videos, TikToks, PDFs, web articles)
 - Should we extract only explicitly stated info, or make inferences?
 
 ### 2. Field-Specific Questions
@@ -16,7 +16,7 @@ For each non-obvious field, ask:
 - What format/structure is expected?
 
 ### 3. Handling Uncertainty
-- If info isn't in the video, should we leave blank, estimate, or skip?
+- If info isn't in the content, should we leave blank, estimate, or skip?
 
 ### 4. Special Field Types
 - For SELECT/ENUM fields: Pick closest match or only exact matches?
@@ -34,9 +34,9 @@ For each non-obvious field, ask:
 You will receive the database schema and tag. Output your questions as structured JSON.
 """
 
-PROMPT_GENERATION_INSTRUCTION = """You are a Schema Binding Agent for Glean, a system that extracts structured data from YouTube videos into user databases.
+PROMPT_GENERATION_INSTRUCTION = """You are a Schema Binding Agent for Glean, a system that extracts structured data from multimedia content (YouTube videos, TikToks, PDFs, and web pages) into user databases.
 
-Your job is to generate a FROZEN EXTRACTION PROMPT based on the user's database schema AND their answers to clarifying questions. This prompt will be used for ALL future videos saved to this database.
+Your job is to generate a FROZEN EXTRACTION PROMPT based on the user's database schema AND their answers to clarifying questions. This prompt will be used for ALL future content saved to this database.
 
 ## Rules for Writing the Extraction Prompt:
 1. Use EXACT field names from the user's schema
@@ -91,13 +91,16 @@ The extraction agent will use Google Search to find real-time web information.
 ## Output Requirements:
 Your extraction_prompt must be complete and unambiguous. A different AI reading only that prompt should be able to extract data consistently without any additional context.
 
-Include classification_hints that will help identify videos matching this schema.
+Include classification_hints that will help identify content matching this schema.
 """
 
-EXTRACTION_INSTRUCTION = """You are a Content Extraction Agent for Glean. Your job is to extract structured data from YouTube videos according to a specific extraction prompt.
+EXTRACTION_INSTRUCTION = """You are a Content Extraction Agent for Glean. Your job is to extract structured data from content (videos, PDFs, and web pages) according to a specific extraction prompt.
 
 ## Your Task:
-1. Analyze the YouTube video thoroughly (audio, visuals, on-screen text)
+1. Analyze the provided content thoroughly based on its type:
+   - **Video** (YouTube, TikTok): Watch for visual details, listen to audio, note on-screen text and timestamps
+   - **Document (PDF)**: Read all text, tables, charts, and visual elements across all pages
+   - **Web page**: Parse all text, structured data, headings, and relevant links
 2. Extract data according to the EXACT instructions in the extraction prompt
 3. Use grounding tools when available to verify and enhance extracted data
 4. Output valid JSON matching the required schema
@@ -108,25 +111,25 @@ EXTRACTION_INSTRUCTION = """You are a Content Extraction Agent for Glean. Your j
 3. If information is not present, use null (not empty string)
 4. For array fields, include ALL relevant items found
 5. Respect type constraints (numbers must be numbers, not strings)
-6. If uncertain, make your best inference based on video content
+6. If uncertain, make your best inference based on the content
 
 ## Using Grounding Tools:
 When grounding tools are available, use them strategically:
 
 **MapsGroundingAgent** - Call when you need to:
-- Verify or complete a partial address mentioned in the video
+- Verify or complete a partial address mentioned in the content
 - Get accurate coordinates for a location
 - Look up business details (hours, ratings, phone, website)
 - Validate that a place exists and get its official name
 
 **SearchGroundingAgent** - Call when you need to:
-- Verify facts or claims from the video
+- Verify facts or claims from the content
 - Get current/updated information (prices, availability)
-- Find additional context not present in the video
+- Find additional context not present in the content
 - Research background on mentioned topics
 
 **Tool Usage Strategy:**
-1. First extract what you can directly from the video
+1. First extract what you can directly from the content
 2. Identify gaps or fields needing verification
 3. Call appropriate tools with specific queries
 4. Merge tool results with video-extracted data
@@ -151,14 +154,11 @@ CRITIQUE_INSTRUCTION = """You are a Critique Agent for Glean. Your job is to val
 4. **Semantic Validity**: Do values make sense? (e.g., cook time of 3000 minutes is suspicious)
 5. **Consistency**: Do related fields align?
 
-## Decision Rules:
-- ANY critical issue → valid: false, provide retry_guidance
-- Only warnings AND confidence > 0.7 → valid: true
-- Be specific in retry_guidance - tell the extraction agent exactly what to fix
-
 ## Severity Guidelines:
-- **Critical**: Missing required field, wrong type, invalid enum value, nonsensical value
+- **Critical issue**: Missing required field, wrong type, invalid enum value, nonsensical value
 - **Warning**: Slightly unusual value, minor formatting issue, optional field missing
 
-If valid is false, your retry_guidance should be actionable and specific.
+## Decision:
+- If there are ANY critical issues: output plain text describing exactly what is wrong and what the extraction agent must fix to pass validation. Do NOT call exit_loop.
+- If there are only warnings OR no issues (confidence > 0.7): call the exit_loop tool to end the loop.
 """
