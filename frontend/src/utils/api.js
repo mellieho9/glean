@@ -125,3 +125,18 @@ export function processVideo(integration, youtubeUrl, sourceId, accessToken) {
     body: JSON.stringify({ youtube_url: youtubeUrl, source_id: sourceId }),
   });
 }
+
+export function writeJobData(jobId, extractedData, accessToken) {
+  return request(`/agent/jobs/${encodeURIComponent(jobId)}/write`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(extractedData),
+  });
+}
+
+export function dismissJob(jobId, accessToken) {
+  return request(`/agent/jobs/${encodeURIComponent(jobId)}`, {
+    method: "DELETE",
+    headers: authHeaders(accessToken),
+  });
+}

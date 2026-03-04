@@ -238,14 +238,40 @@ async def process_video(
     try:
         extraction_text = None
         attempts = 0
+        critique_thoughts = []
+        current_iteration_thoughts = []
+
         async for event in runner.run_async(
             session_id=session.id, user_id="user", new_message=content,
         ):
-            if getattr(event, "author", None) == "ContentExtractionAgent":
+            author = getattr(event, "author", None)
+
+            if author == "ContentExtractionAgent":
                 for part in (event.content and event.content.parts) or []:
                     if getattr(part, "text", None):
                         extraction_text = part.text
+                        # Flush previous iteration's critique thoughts before starting new extraction
+                        if current_iteration_thoughts:
+                            critique_thoughts.append(current_iteration_thoughts)
+                            current_iteration_thoughts = []
                         attempts += 1
+
+            elif author == "CritiqueAgent":
+                parts = (event.content and event.content.parts) or []
+                # Text reasoning
+                for part in parts:
+                    if getattr(part, "text", None):
+                        current_iteration_thoughts.append({"type": "reasoning", "text": part.text})
+                # Tool calls
+                for fc in event.get_function_calls():
+                    current_iteration_thoughts.append({"type": "tool_call", "tool": fc.name, "args": fc.args})
+                # Tool responses
+                for fr in event.get_function_responses():
+                    current_iteration_thoughts.append({"type": "tool_response", "tool": fr.name, "response": fr.response})
+
+        # Flush last iteration's thoughts
+        if current_iteration_thoughts:
+            critique_thoughts.append(current_iteration_thoughts)
 
         raw_content = session.state.get("extracted_content") or extraction_text
 
@@ -262,14 +288,14 @@ async def process_video(
                     critique_result = {"raw": critique_raw}
 
         if raw_content is None:
-            return ProcessingResult(success=False, error="No extracted content found", attempts=attempts)
+            return ProcessingResult(success=False, error="No extracted content found", attempts=attempts, critique_thoughts=critique_thoughts)
 
         try:
             extracted_data = _parse_extracted_data(raw_content)
             if not isinstance(extracted_data, list):
                 extracted_data = [extracted_data]
         except (json.JSONDecodeError, TypeError):
-            return ProcessingResult(success=False, extracted_data=[{"raw_output": raw_content}], error="Failed to parse extracted data", critique=critique_result, attempts=attempts)
+            return ProcessingResult(success=False, extracted_data=[{"raw_output": raw_content}], error="Failed to parse extracted data", critique=critique_result, critique_thoughts=critique_thoughts, attempts=attempts)
 
         # Write was attempted inside the critique agent's try_write_and_exit tool.
         write_result = session.state.get("write_result")
@@ -279,6 +305,7 @@ async def process_video(
                 success=False,
                 extracted_data=extracted_data,
                 critique=critique_result,
+                critique_thoughts=critique_thoughts,
                 attempts=attempts,
                 error="Max retries reached without a successful write",
             )
@@ -288,6 +315,7 @@ async def process_video(
             success=wrote,
             extracted_data=extracted_data,
             critique=critique_result,
+            critique_thoughts=critique_thoughts,
             attempts=attempts,
             error=None if wrote else f"Write failed: {write_result.get('errors')}",
         )

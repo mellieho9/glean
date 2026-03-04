@@ -102,5 +102,6 @@ class ProcessingResult:
     success: bool
     extracted_data: Optional[list] = None
     critique: Optional[dict] = None
+    critique_thoughts: Optional[list] = None
     attempts: int = 0
     error: Optional[str] = None

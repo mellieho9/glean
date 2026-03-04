@@ -7,6 +7,8 @@ import {
   listConfiguredSchemas,
   listJobs,
   getJob,
+  writeJobData,
+  dismissJob,
 } from "../utils/api";
 import PageLayout from "../components/PageLayout";
 import SchemaCard from "../components/SchemaCard";
@@ -56,17 +58,23 @@ function formatUrl(url) {
   }
 }
 
-function JobCard({ job, schemaName, accessToken }) {
+function JobCard({ job, schemaName, accessToken, onRemove }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editedData, setEditedData] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // "saved" | "error"
+  const [removing, setRemoving] = useState(false);
 
   const handleClick = async () => {
     if (job.status === "pending" || job.status === "processing") return;
 
     if (expanded) {
       setExpanded(false);
+      setEditing(false);
       return;
     }
 
@@ -75,6 +83,9 @@ function JobCard({ job, schemaName, accessToken }) {
       try {
         const data = await getJob(job.id, accessToken);
         setDetail(data);
+        if (data?.result?.extracted_data) {
+          setEditedData(data.result.extracted_data.map((item) => ({ ...item })));
+        }
       } catch {
         setDetail({ error: "Failed to load details" });
       } finally {
@@ -92,7 +103,42 @@ function JobCard({ job, schemaName, accessToken }) {
     });
   };
 
+  const handleFieldChange = (itemIdx, key, value) => {
+    setEditedData((prev) =>
+      prev.map((item, i) => (i === itemIdx ? { ...item, [key]: value } : item))
+    );
+  };
+
+  const handleSave = async (e) => {
+    e.stopPropagation();
+    setSaving(true);
+    setSaveStatus(null);
+    try {
+      await writeJobData(job.id, editedData, accessToken);
+      setSaveStatus("saved");
+      setEditing(false);
+      setDetail((prev) => ({ ...prev, status: "completed", result: { ...prev?.result, extracted_data: editedData } }));
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async (e) => {
+    e.stopPropagation();
+    setRemoving(true);
+    try {
+      await dismissJob(job.id, accessToken);
+      onRemove(job.id);
+    } catch {
+      setRemoving(false);
+    }
+  };
+
   const isClickable = job.status === "completed" || job.status === "failed";
+  const extractedData = editedData || detail?.result?.extracted_data;
+  const hasExtractedData = extractedData && extractedData.length > 0;
 
   return (
     <div
@@ -127,7 +173,15 @@ function JobCard({ job, schemaName, accessToken }) {
             </span>
           </>
         )}
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0 ml-auto">
+        <button
+          onClick={handleRemove}
+          disabled={removing}
+          className="shrink-0 text-slate-300 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50 ml-auto"
+          title="Remove"
+        >
+          <Icon name="delete" filled={false} className="text-[18px]" />
+        </button>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
           {statusLabel(job.status)}
         </span>
         {isClickable && (
@@ -153,36 +207,97 @@ function JobCard({ job, schemaName, accessToken }) {
       )}
 
       {expanded && (
-        <div className="mt-3 pt-3 border-t border-slate-100">
+        <div className="mt-3 pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
           {loadingDetail ? (
             <div className="flex justify-center py-2">
               <div className="w-4 h-4 border-2 border-slate-200 border-t-primary rounded-full spinner" />
             </div>
-          ) : detail?.error && job.status === "failed" ? (
-            <div className="bg-red-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-red-600 mb-1">Error</p>
-              <p className="text-xs text-red-500">{detail.error}</p>
-            </div>
-          ) : detail?.result?.extracted_data ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-slate-500">Extracted Data</p>
-              {detail.result.extracted_data.map((item, i) => (
-                <div key={i} className="bg-white rounded-lg border border-slate-100 p-3">
-                  {Object.entries(item).map(([key, val]) => (
-                    <div key={key} className="flex gap-2 py-0.5">
-                      <span className="text-[11px] font-medium text-slate-500 shrink-0">
-                        {key}:
-                      </span>
-                      <span className="text-[11px] text-slate-700 break-words">
-                        {typeof val === "object" ? JSON.stringify(val) : String(val)}
-                      </span>
+          ) : (
+            <div className="space-y-3">
+              {detail?.error && (
+                <div className="bg-red-50 rounded-lg p-3">
+                  <p className="text-xs font-medium text-red-600 mb-1">Error</p>
+                  <p className="text-xs text-red-500">{detail.error}</p>
+                </div>
+              )}
+
+              {hasExtractedData && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-500">Extracted Data</p>
+                  {extractedData.map((item, i) => (
+                    <div key={i} className="bg-white rounded-lg border border-slate-100 p-3 space-y-1">
+                      {Object.entries(item).map(([key, val]) => (
+                        <div key={key} className="flex gap-2 items-start py-0.5">
+                          <span className="text-[11px] font-medium text-slate-500 shrink-0 pt-0.5 w-28">
+                            {key}
+                          </span>
+                          {editing ? (
+                            <input
+                              className="text-[11px] text-slate-700 border border-slate-200 rounded px-1.5 py-0.5 flex-1 min-w-0 focus:outline-none focus:border-primary"
+                              value={typeof val === "object" ? JSON.stringify(val) : String(val ?? "")}
+                              onChange={(e) => handleFieldChange(i, key, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span className="text-[11px] text-slate-700 break-words flex-1">
+                              {typeof val === "object" ? JSON.stringify(val) : String(val ?? "")}
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
-              ))}
+              )}
+
+              {!hasExtractedData && !detail?.error && (
+                <p className="text-xs text-slate-400">No data available</p>
+              )}
+
+              {saveStatus === "saved" && (
+                <p className="text-xs text-green-600">Saved to database.</p>
+              )}
+              {saveStatus === "error" && (
+                <p className="text-xs text-red-500">Failed to save. Try again.</p>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                {hasExtractedData && job.status === "failed" && !editing && (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="text-[11px] font-medium px-3 py-1 rounded-lg border border-slate-200 text-slate-600 hover:border-slate-400 transition-colors cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                )}
+                {editing && (
+                  <>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="text-[11px] font-medium px-3 py-1 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                    >
+                      {saving ? "Saving…" : `Add to ${schemaName}`}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditing(false); setEditedData(detail?.result?.extracted_data?.map((item) => ({ ...item }))); }}
+                      className="text-[11px] font-medium px-3 py-1 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-400 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {!editing && hasExtractedData && job.status === "failed" && (
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="text-[11px] font-medium px-3 py-1 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? "Saving…" : `Add to ${schemaName}`}
+                  </button>
+                )}
+              </div>
             </div>
-          ) : (
-            <p className="text-xs text-slate-400">No data available</p>
           )}
         </div>
       )}
@@ -355,6 +470,7 @@ export default function Dashboard() {
                   job={job}
                   schemaName={schemaNameMap[job.source_id] || job.source_id}
                   accessToken={accessToken}
+                  onRemove={(id) => setJobs((prev) => prev.filter((j) => j.id !== id))}
                 />
               ))
             )}

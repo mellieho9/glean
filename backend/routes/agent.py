@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Body, Path, Header, Query
 
 from services.user import get_current_user
 from services.schema_handler import get_schema_handler
-from services.database import read_rows, create_row, update_rows, get_database_client
+from services.database import read_rows, create_row, update_rows, delete_rows, get_database_client
 
 from services.agents.pipeline import (
     run_onboarding_chain,
@@ -79,19 +79,18 @@ async def get_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
 
     job = rows[0]
+    raw_result = job.get("result")
+    parsed_result = (
+        json.loads(raw_result) if isinstance(raw_result, str) else raw_result
+    ) or {}
     response = {
         "job_id": job["id"],
         "status": job["status"],
         "url": job.get("url"),
         "created_at": job.get("created_at"),
+        "result": parsed_result,
+        "error": job.get("error"),
     }
-    if job["status"] == "completed":
-        raw_result = job.get("result")
-        response["result"] = (
-            json.loads(raw_result) if isinstance(raw_result, str) else raw_result
-        )
-    elif job["status"] == "failed":
-        response["error"] = job.get("error")
     return response
 
 
@@ -218,6 +217,7 @@ async def _run_job(job_id: str, user, integration: str, url: str, source_id: str
                 "result": json.dumps({
                     "extracted_data": result.extracted_data,
                     "critique": result.critique,
+                    "critique_thoughts": result.critique_thoughts,
                     "attempts": result.attempts,
                 }),
                 "error": result.error,
@@ -270,3 +270,47 @@ async def process_video_endpoint(
         raise HTTPException(
             status_code=500, detail=f"Failed to submit job: {str(e)}"
         ) from e
+
+
+@router.post("/jobs/{job_id}/write")
+async def write_job_data(
+    job_id: str = Path(...),
+    access_token: str = Header(..., alias="Authorization"),
+    extracted_data: List[Dict[str, Any]] = Body(...),
+) -> Dict[str, Any]:
+    user = _get_authenticated_user(access_token)
+    db_client = get_database_client(use_service_role=True)
+
+    rows = read_rows("jobs", filters={"id": job_id, "user_id": user.id}, limit=1, client=db_client).get("data", [])
+    if not rows:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job = rows[0]
+    try:
+        handler = get_schema_handler(user, job["integration"])
+        write_result = handler.write_data(job["source_id"], extracted_data)
+        success = write_result.get("success", False) if isinstance(write_result, dict) else False
+        update_rows(
+            "jobs",
+            filters={"id": job_id},
+            data={
+                "status": "completed" if success else "failed",
+                "error": None if success else f"Write failed: {write_result}",
+                "result": json.dumps({"extracted_data": extracted_data}),
+            },
+            client=db_client,
+        )
+        return {"success": success}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/jobs/{job_id}")
+async def delete_job(
+    job_id: str = Path(...),
+    access_token: str = Header(..., alias="Authorization"),
+) -> Dict[str, Any]:
+    user = _get_authenticated_user(access_token)
+    db_client = get_database_client(use_service_role=True)
+    delete_rows("jobs", filters={"id": job_id, "user_id": user.id}, client=db_client)
+    return {"deleted": True}
